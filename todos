@@ -2,4 +2,5 @@ Add writeup of derivations
 Implement everything
 
 Implement transition mixture node
-Think about weird message results. How does it make sense to put less weight on the goal the closer we are?
+    Differs from Thijs implementation in FL. Check derivations
+
