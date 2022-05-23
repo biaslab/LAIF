@@ -21,7 +21,8 @@ struct TransitionMixture end
 
     inp = probvec(m_in)
 
-    p = zeros(size(z)[1])
+    # Hack some more...
+    p = zeros(size(B1*inp)[1])
     for k in 1:4
 	p += z[k] * Bs[k] * inp
     end
@@ -41,7 +42,8 @@ end
 
     out = probvec(m_out)
 
-    p = zeros(size(z)[1])
+    # This is ugly..
+    p = zeros(size(B1'*out)[1])
     for k in 1:4
 	p += z[k] * Bs[k]' * out
     end

@@ -1,18 +1,34 @@
-using Pkg; Pkg.activate(".");Pkg.instantiate()
-using ReactiveMP, Rocket, GraphPPL, OhMyREPL, LinearAlgebra
-enable_autocomplete_brackets(false)
+#using Pkg; Pkg.activate(".");Pkg.instantiate()
+#using ReactiveMP, Rocket, GraphPPL, OhMyREPL, LinearAlgebra,Distributions
+#enable_autocomplete_brackets(false)
+
+#struct GFECategorical end
+#@node GFECategorical Stochastic [in,A,C]
+#
+#safelog(x) = log(x +eps())
+#@rule GFECategorical(:in, Marginalisation) (q_in::Any, q_a::PointMass, q_c::PointMass) = begin
+#    z = mean(q_in)
+#    A = mean(m_a)
+#    C = mean(m_c)
+#    # q_out needs to be A*mean(incoming), hence this line
+#    x = A * z
+#    # Write this out in a nicer way
+#    ρ = sum(z .* A .* safelog.(A)',dims= 2) + z.*A * (safelog.(C) - safelog.(x))
+#    return Categorical(exp.(ρ) / sum(exp.(ρ)))
+#end
 
 struct GFECategorical end
+@node GFECategorical Stochastic [out,in,A]
 
 safelog(x) = log(x +eps())
-@rule GFECategorical(:in, Marginalisation) (q_in::Any, q_a::PointMass, q_c::PointMass) = begin
-    z = mean(q_in)
-    A = mean(m_a)
-    C = mean(m_c)
+@rule GFECategorical(:in, Marginalisation) (q_out::PointMass,m_in::Categorical, q_A::PointMass) = begin
+    z = probvec(m_in)
+    A = mean(q_A)
+    C = probvec(q_out)
     # q_out needs to be A*mean(incoming), hence this line
     x = A * z
-    # Write this out in a nicer way
-    ρ = sum(z .* A .* safelog.(A)',dims= 2) + z.*A * (safelog.(C) - safelog.(x))
+    # Write this out in a nicer way. Vec is there to force the type to not be Matrix
+    ρ = vec(sum(z .* A .* safelog.(A)',dims= 2)) + z.*A * (safelog.(C) - safelog.(x))
     return Categorical(exp.(ρ) / sum(exp.(ρ)))
 end
 
