@@ -66,7 +66,8 @@ end
     p = zeros(4)
     # This is out' * B * inp in Thijs implementation?
     for k in 1:4
-	p[k] += inp' * Bs[k] * out
+	#p[k] += inp' * Bs[k] * out
+	p[k] += out' * Bs[k] * inp
     end
 
     return Categorical(p ./ sum(p))
