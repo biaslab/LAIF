@@ -28,7 +28,11 @@ safelog(x) = log(x +eps())
     # q_out needs to be A*mean(incoming), hence this line
     x = A * z
     # Write this out in a nicer way. Vec is there to force the type to not be Matrix
-    ρ = vec(sum(z .* A .* safelog.(A)',dims= 2)) + z.*A * (safelog.(C) - safelog.(x))
+    #ρ = vec(sum(z .* A .* safelog.(A)',dims= 2)) + z.*A * (safelog.(C) - safelog.(x))
+    ρ = zeros(size(z))
+    for i in 1:size(A)[2]
+        ρ[i] = z[i] * A[:,i]' * safelog.(A[:,i]) + z[i] * A[:,i]' * safelog.(C) - z[i] * A[:,i]' * safelog.(x)
+    end
     return Categorical(exp.(ρ) / sum(exp.(ρ)))
 end
 
