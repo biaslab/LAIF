@@ -5,7 +5,7 @@ include("transition_mixture.jl")
 include("categorical.jl")
 include("helpers.jl")
 
-T = 3
+T = 2
 
 A,B,C,D = constructABCD(1.0,2.,T)
 
@@ -25,15 +25,13 @@ A,B,C,D = constructABCD(1.0,2.,T)
         z_prev = z[t]
     end
 end
-#D = B[4] * D
-#D = zeros(8)
-#D[8] = 1.
 
 imodel = Model(t_maze,A,D,B[1],B[2],B[3],B[4],T)
 
 result = inference(model = imodel, data= (x = C,))
 
-probvec(result.posteriors[:switch][1][1])
+# Ignores first step, goes to cue on second
+probvec(result.posteriors[:switch][1][2])
 #probvec(result.posteriors[:z][1][2])
 
 
