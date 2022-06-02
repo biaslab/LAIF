@@ -1,7 +1,7 @@
 softmax(x) = exp.(x) ./ sum(exp.(x))
 
 # Stolen from the Epistemic Value paper
-function constructABCD(α::Float64, c::Float64)
+function constructABCD(α::Float64, c::Float64,T)
     # Observation model
     A_1 = [0.5 0.5;
            0.5 0.5;
@@ -60,5 +60,5 @@ function constructABCD(α::Float64, c::Float64)
     # However, from the context as described in the paper this appears to be a notational error.
     D = kron([1.0, 0.0, 0.0, 0.0], [0.5, 0.5])
 
-    return (A, B, [C,C], D)
+    return (A, B, [C for t in 1:T], D)
 end
