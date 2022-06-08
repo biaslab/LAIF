@@ -7,8 +7,10 @@ include("helpers.jl")
 
 T = 2
 
-A,B,C,D = constructABCD(1.0,2.,T)
+A,B,C,D = constructABCD(0.9,2.0,T)
 
+# Try with all policies and evaluate EFE for each.
+# Try with the EFE evaluation from the paper
 @model function t_maze(A,D,B1,B2,B3,B4,T)
     z_0 ~ Categorical(D)
 
@@ -31,7 +33,7 @@ imodel = Model(t_maze,A,D,B[1],B[2],B[3],B[4],T)
 result = inference(model = imodel, data= (x = C,))
 
 # Ignores first step, goes to cue on second
-probvec(result.posteriors[:switch][1][2])
-#probvec(result.posteriors[:z][1][2])
+probvec(result.posteriors[:switch][1][1])
 
+#probvec(result.posteriors[:z][1][2])
 

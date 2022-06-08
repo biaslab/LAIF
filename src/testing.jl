@@ -10,13 +10,13 @@ for i in 1:4
 end
 
 # Initial state
-D = [0.5,0.5,0,0]
+D = [1.,0.,0,0]
 # Likelihood
 A = diageye(4)
 
-goal = [[0.,0.,0.3,0.7],
-	[1.,0.,0.0,0.0],
-	[0.,0.,0.3,0.7] ]
+goal = [[0.,0.,0.,1.],
+	[1.,0.,0.,0.],
+	[0.,0.,0.,1.] ]
 
 
 @model function controlled_hmm(A,D,B1,B2,B3,B4,n)
