@@ -1,4 +1,5 @@
 [deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 GraphPPL = "b3f8163a-e979-4e85-b43e-1f63d8c8b42c"
 OhMyREPL = "5fb14364-9ced-5910-84b2-373655c76a03"
