@@ -1,7 +1,7 @@
 softmax(x) = exp.(x) ./ sum(exp.(x))
 
 # Stolen from the Epistemic Value paper
-function constructABCD(α::Float64, c::Float64,T)
+function constructABCD(α::Float64, Cs,T)
     # Observation model
     A_1 = [0.5 0.5;
            0.5 0.5;
@@ -53,12 +53,13 @@ function constructABCD(α::Float64, c::Float64,T)
     B = [B_1, B_2, B_3, B_4]
 
     # Goal prior
-    C = softmax(kron(ones(4), [0.0, 0.0, c, -c]))
+    C = [softmax(kron(ones(4), [0.0, 0.0, c, -c])) for c in Cs]
 
     # Initial state prior
     # Note: in the epistemic value paper (Friston, 2015) there is a softmax over D.
     # However, from the context as described in the paper this appears to be a notational error.
     D = kron([1.0, 0.0, 0.0, 0.0], [0.5, 0.5])
 
-    return (A, B, [C for t in 1:T], D)
+    #return (A, B, [C for t in 1:T], D)
+    return (A, B, C, D)
 end

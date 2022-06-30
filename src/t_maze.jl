@@ -7,7 +7,7 @@ include("helpers.jl")
 
 T = 2
 
-A,B,C,D = constructABCD(0.9,2.0,T)
+A,B,C,D = constructABCD(0.9,[2.0,2.0],T)
 
 @model function t_maze(A,D,B1,B2,B3,B4,T)
 
@@ -28,14 +28,15 @@ A,B,C,D = constructABCD(0.9,2.0,T)
 end
 
 # Probably not necessary
-@constraints function efe_constraints(D)
-    q(z_0) :: Marginal(Categorical(D))
-end
+#@constraints function efe_constraints(D)
+#    q(z_0) :: Marginal(Categorical(D))
+#end
 
 
 imodel = Model(t_maze,A,D,B[1],B[2],B[3],B[4],T)
 
-result = inference(model = imodel, data= (x = C,),constraints=efe_constraints(D))
+#result = inference(model = imodel, data= (x = C,),constraints=efe_constraints(D))
+result = inference(model = imodel, data= (x = C,))
 
 probvec(result.posteriors[:z][1][1])
 probvec(result.posteriors[:switch][1][1])
