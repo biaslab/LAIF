@@ -1,3 +1,7 @@
+using ForneyLab: SoftFactor, generateId, @ensureVariables, addNode!, associate!
+
+import ForneyLab: slug, averageEnergy
+
 export GFECategorical
 
 """

@@ -18,7 +18,7 @@ function plotResults(F; dpi=100, clim=(4.0,8.0), title="", highlight=nothing)
             size=(500,430))
 
     F_round = round.(F, digits=2)
-    if highlight != nothing
+    if highlight !== nothing
         extremum = highlight(F_round)
     else
         extremum = NaN
