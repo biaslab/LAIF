@@ -13,7 +13,7 @@ end
 safelog(x) = log(x +eps())
 
 #note, why is it m_in and not q_in???
-@rule GFECategorical(:in, Marginalisation) (q_out::PointMass,q_in::Categorical, q_A::PointMass) = begin
+@rule GFECategorical(:in, Marginalisation) (q_out::PointMass,q_in::DiscreteNonParametric, q_A::PointMass) = begin
     z = probvec(q_in)
     A = mean(q_A)
     # We use the goal prior on an edge here
