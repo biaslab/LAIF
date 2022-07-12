@@ -6,7 +6,7 @@ include("helpers.jl")
 
 T = 2
 
-A,B,C,D = constructABCD(0.9,2.0,T)
+A,B,C,D = constructABCD(0.9,[2.0,2.0],T)
 
 
 # Workaround for ReactiveMP being unable to compute FE when D contains 0 entries
@@ -51,21 +51,17 @@ end
 #              z = vague(Categorical,8),
 #             )
 
-
 its = 20
 F = zeros(4,4)
 for i in 1:4
     for j in 1:4
         imodel = Model(t_maze,A,DD,[B[i],B[j]],T)
-#result = inference(model = imodel, data= (x = C,),initmarginals=imarginals,  free_energy=true)
-#result = inference(model = imodel, data= (x = [C[1],C[1]],),constraints=efe_constraints(),iterations=20)
-#result = inference(model = imodel, data= (x = [C[1],C[1]],),free_energy=true,constraints=efe_constraints(),iterations=20)
-#result = inference(model = imodel, data= (x = [C[1],C[1]],),iterations=21)
-        result = inference(model = imodel, data= (x = [C[1],C[1]],),free_energy=true,iterations=its)
+        result = inference(model = imodel, data= (x = C,),free_energy=true,iterations=its)
 
-        #probvec(result.posteriors[:z][1][1])
-        #probvec(result.posteriors[:z][1][2])
-        F[i,j] =result.free_energy[end]  ./log(2)
+        F[i,j] =result.free_energy[end] ./log(2)
     end
 end
 F
+
+#probvec(result.posteriors[:z][1][1])
+#probvec(result.posteriors[:z][1][2])
