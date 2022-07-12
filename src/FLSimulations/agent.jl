@@ -1,10 +1,8 @@
 using ForneyLab: softmax #, unsafeMean, unsafeMode
 
-function evaluatePolicies(A, B, C, D)
-    #C_t = [C, C]
-    C_t = [ones(16)/16, C]
-
-    n_its = 20
+function evaluatePolicies(A, B, C, D,n_its)
+    C_t = [C, C]
+    #C_t = [ones(16)/16, C]
 
     # Evaluate all policies
     F = zeros(4,4)

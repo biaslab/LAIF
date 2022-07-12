@@ -9,9 +9,11 @@ T = 2
 A,B,C,D = constructABCD(0.9,2.0,T)
 
 
+# Workaround for ReactiveMP being unable to compute FE when D contains 0 entries
 DD = ones(8) * eps()
 DD[1:2] .= 0.5 - eps() * 6
 DD
+
 # Variatonal update rules for messing with VMP
 @rule Transition(:in, Marginalisation) (q_out::DiscreteNonParametric, q_a::PointMass) = begin
     a = clamp.(exp.(mean(log, q_a)' * probvec(q_out)), tiny, Inf)
@@ -50,15 +52,20 @@ end
 #             )
 
 
-
-imodel = Model(t_maze,A,DD,[B[4],B[2]],T)
+its = 20
+F = zeros(4,4)
+for i in 1:4
+    for j in 1:4
+        imodel = Model(t_maze,A,DD,[B[i],B[j]],T)
 #result = inference(model = imodel, data= (x = C,),initmarginals=imarginals,  free_energy=true)
 #result = inference(model = imodel, data= (x = [C[1],C[1]],),constraints=efe_constraints(),iterations=20)
 #result = inference(model = imodel, data= (x = [C[1],C[1]],),free_energy=true,constraints=efe_constraints(),iterations=20)
 #result = inference(model = imodel, data= (x = [C[1],C[1]],),iterations=21)
-result = inference(model = imodel, data= (x = [C[1],C[1]],),free_energy=true,iterations=21)
+        result = inference(model = imodel, data= (x = [C[1],C[1]],),free_energy=true,iterations=its)
 
-probvec(result.posteriors[:z][1][1])
-probvec(result.posteriors[:z][1][2])
-# Why is this Inf?????
-result.free_energy
+        #probvec(result.posteriors[:z][1][1])
+        #probvec(result.posteriors[:z][1][2])
+        F[i,j] =result.free_energy[end]  ./log(2)
+    end
+end
+F
