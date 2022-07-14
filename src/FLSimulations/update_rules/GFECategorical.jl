@@ -16,9 +16,9 @@ function ruleSPGFECategoricalOutDPP(marg_out::Distribution{Univariate, Categoric
     A = msg_A.dist.params[:m]
     c = msg_c.dist.params[:m]
 
-    rho = diag(A'*log.(A .+ tiny)) + A'*log.(c .+ tiny) - A'*log.(A*s .+ tiny)
+    rho = exp.(diag(A'*log.(A .+ tiny)) + A'*log.(c .+ tiny) - A'*log.(A*s .+ tiny))
 
-    Message(Univariate, Categorical, p=exp.(rho)./sum(exp.(rho)))
+    Message(Univariate, Categorical, p=rho./sum(rho))
 end
 
 function collectSumProductNodeInbounds(::GFECategorical, entry::ScheduleEntry)
@@ -56,7 +56,7 @@ function ruleVBGFECategoricalOut(marg_out::Distribution{Univariate, Categorical}
     A = marg_A.params[:m]
     c = marg_c.params[:m]
 
-    rho = diag(A'*log.(A .+ tiny)) + A'*log.(c .+ tiny) - A'*log.(A*s .+ tiny)
+    rho = exp.(diag(A'*log.(A .+ tiny)) + A'*log.(c .+ tiny) - A'*log.(A*s .+ tiny))
 
     Message(Univariate, Categorical, p=rho./sum(rho))
 end
