@@ -18,7 +18,7 @@ function ruleSPGFECategoricalOutDPP(marg_out::Distribution{Univariate, Categoric
 
     rho = diag(A'*log.(A .+ tiny)) + A'*log.(c .+ tiny) - A'*log.(A*s .+ tiny)
 
-    Message(Univariate, Categorical, p=rho./sum(rho))
+    Message(Univariate, Categorical, p=exp.(rho)./sum(exp.(rho)))
 end
 
 function collectSumProductNodeInbounds(::GFECategorical, entry::ScheduleEntry)
