@@ -9,14 +9,14 @@ export ruleVBGFECategoricalOut, ruleVBGFECategoricalOut
                 :inbound_types => (Nothing, Message{PointMass}, Message{PointMass}),
                 :name          => SPGFECategoricalOutDPP)
 
-function ruleSPGFECategoricalOutDPP(marg_out::Distribution{Univariate, Categorical}, 
+function ruleSPGFECategoricalOutDPP(marg_out::Distribution{Univariate, Categorical},
                                     msg_A::Message{PointMass, MatrixVariate},
                                     msg_c::Message{PointMass, Multivariate})
     s = marg_out.params[:p]
     A = msg_A.dist.params[:m]
     c = msg_c.dist.params[:m]
 
-    rho = exp.(diag(A'*log.(A .+ tiny)) + A'*log.(c .+ tiny) - A'*log.(A*s .+ tiny))
+    rho = exp.(diag(A'*log.(A .+ exp(-16))) + A'*log.(c .+ exp(-16)) - A'*log.(A*s .+ exp(-16)))
 
     Message(Univariate, Categorical, p=rho./sum(rho))
 end
@@ -49,14 +49,14 @@ end
                       :inbound_types => (Nothing, Distribution, Distribution),
                       :name          => VBGFECategoricalOut)
 
-function ruleVBGFECategoricalOut(marg_out::Distribution{Univariate, Categorical}, 
+function ruleVBGFECategoricalOut(marg_out::Distribution{Univariate, Categorical},
                                  marg_A::Distribution{MatrixVariate, PointMass},
                                  marg_c::Distribution{Multivariate, PointMass})
     s = marg_out.params[:p]
     A = marg_A.params[:m]
     c = marg_c.params[:m]
 
-    rho = exp.(diag(A'*log.(A .+ tiny)) + A'*log.(c .+ tiny) - A'*log.(A*s .+ tiny))
+    rho = exp.(diag(A'*log.(A .+ exp(-16))) + A'*log.(c .+ exp(-16)) - A'*log.(A*s .+ exp(-16)))
 
     Message(Univariate, Categorical, p=rho./sum(rho))
 end
