@@ -57,6 +57,7 @@ function ruleVBGFECategoricalOut(marg_out::Distribution{Univariate, Categorical}
     c = marg_c.params[:m]
 
     rho = exp.(diag(A'*log.(A .+ tiny)) + A'*log.(c .+ tiny) - A'*log.(A*s .+ tiny))
+    # rho = exp.(diag(A'*log.(clamp.(A, tiny, Inf))) + A'*log.(clamp.(c, tiny, Inf)) - A'*log.(clamp.(A*s, tiny, Inf)))
 
     Message(Univariate, Categorical, p=rho./sum(rho))
 end

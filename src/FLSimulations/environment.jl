@@ -1,5 +1,17 @@
 using ForneyLab: softmax
 
+epsilon = exp(-16)
+
+function soften(a::Vector)
+    a_eps = a .+ epsilon
+    return a_eps./sum(a_eps)
+end
+
+function soften(A::Matrix)
+    A_eps = A .+ epsilon
+    return A_eps./sum(A_eps, dims=1)
+end
+
 function constructABCD(α::Float64, c::Float64)
     # Observation model
     A_1 = [0.5 0.5;
