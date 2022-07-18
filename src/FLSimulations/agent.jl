@@ -1,5 +1,4 @@
-function evaluatePolicies(A, B, C, D)
-    n_its = 10
+function evaluatePolicies(A, B, C, D,n_its)
 
     # Evaluate all policies
     F = zeros(4,4)

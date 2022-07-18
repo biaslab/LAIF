@@ -9,7 +9,7 @@ export ruleVBGFECategoricalOut, ruleVBGFECategoricalOut
                 :inbound_types => (Nothing, Message{PointMass}, Message{PointMass}),
                 :name          => SPGFECategoricalOutDPP)
 
-function ruleSPGFECategoricalOutDPP(marg_out::Distribution{Univariate, Categorical}, 
+function ruleSPGFECategoricalOutDPP(marg_out::Distribution{Univariate, Categorical},
                                     msg_A::Message{PointMass, MatrixVariate},
                                     msg_c::Message{PointMass, Multivariate})
     s = marg_out.params[:p]
@@ -49,7 +49,7 @@ end
                       :inbound_types => (Nothing, Distribution, Distribution),
                       :name          => VBGFECategoricalOut)
 
-function ruleVBGFECategoricalOut(marg_out::Distribution{Univariate, Categorical}, 
+function ruleVBGFECategoricalOut(marg_out::Distribution{Univariate, Categorical},
                                  marg_A::Distribution{MatrixVariate, PointMass},
                                  marg_c::Distribution{Multivariate, PointMass})
     s = marg_out.params[:p]
