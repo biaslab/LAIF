@@ -24,8 +24,7 @@ function evaluatePolicies(A, B, C, D,n_its)
     return F./log(2) # Convert to bits
 end
 
-function evaluatePoliciesMF(A, B, C, D)
-    n_its = 10
+function evaluatePoliciesMF(A, B, C, D,n_its)
 
     # Evaluate all policies
     F = zeros(4,4)

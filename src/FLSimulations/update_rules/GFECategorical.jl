@@ -4,6 +4,8 @@ using ForneyLab: isClamped, assembleClamp!
 
 export ruleVBGFECategoricalOut, ruleVBGFECategoricalOut
 
+#tiny = tiny
+
 @sumProductRule(:node_type     => GFECategorical,
                 :outbound_type => Message{Categorical},
                 :inbound_types => (Nothing, Message{PointMass}, Message{PointMass}),
