@@ -1,0 +1,6 @@
+[deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+GraphPPL = "b3f8163a-e979-4e85-b43e-1f63d8c8b42c"
+OhMyREPL = "5fb14364-9ced-5910-84b2-373655c76a03"
+ReactiveMP = "a194aa59-28ba-4574-a09c-4a745416d6e3"

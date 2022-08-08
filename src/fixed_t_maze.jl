@@ -4,15 +4,16 @@ enable_autocomplete_brackets(false)
 include("categorical.jl")
 include("helpers.jl")
 
-T = 2
+T = 2;
 
-A,B,C,D = constructABCD(0.9,[2.0,2.0],T)
+A,B,C,D = constructABCD(0.9,[2.0,2.0],T);
 
+#A = Matrix{Float64}(vcat(I(8),I(8)))
 
 # Workaround for ReactiveMP being unable to compute FE when D contains 0 entries
-DD = ones(8) * eps()
-DD[1:2] .= 0.5 - eps() * 6
-DD
+DD = ones(8) * eps();
+DD[1:2] .= 0.5 - eps() * 6;
+DD;
 
 # Variatonal update rules for messing with VMP
 @rule Transition(:in, Marginalisation) (q_out::DiscreteNonParametric, q_a::PointMass) = begin
@@ -43,25 +44,23 @@ end
     end
 end
 
-@constraints function efe_constraints()
-    q(z_0, z) = q(z_0)q(z)
-end
+#@constraints function efe_constraints()
+#    q(z_0, z) = q(z_0)q(z)
+#end
 
-#imarginals = (
-#              z = vague(Categorical,8),
-#             )
 
-its = 20
-F = zeros(4,4)
-for i in 1:4
-    for j in 1:4
-        imodel = Model(t_maze,A,DD,[B[i],B[j]],T)
-        result = inference(model = imodel, data= (x = C,),free_energy=true,iterations=its)
+function evaluate_policies(B,its)
+    F = zeros(4,4)
+    for i in 1:4
+        for j in 1:4
+            imodel = Model(t_maze,A,D,[B[i],B[j]],T)
+            result = inference(model = imodel, data= (x = C,),free_energy=true,iterations=its)
 
-        F[i,j] =result.free_energy[end] ./log(2)
+            F[i,j] =result.free_energy[end] ./log(2)
+        end
     end
-end
 F
+end
 
-#probvec(result.posteriors[:z][1][1])
-#probvec(result.posteriors[:z][1][2])
+evaluate_policies(B,10)
+argmin(evaluate_policies(B,10))

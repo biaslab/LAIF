@@ -36,8 +36,8 @@ end;
 imodel = Model(t_maze,A,D,B[1],B[2],B[3],B[4],T);
 
 #result = inference(model = imodel, data= (x = C,),constraints=efe_constraints(D))
-result = inference(model = imodel, data= (x = C,));
+result = inference(model = imodel, data= (x = C,),iterations=11);
 
-probvec(result.posteriors[:z][1][1])
+#probvec(result.posteriors[:z][1][1])
 probvec(result.posteriors[:switch][1][1])
 probvec(result.posteriors[:switch][1][2])
