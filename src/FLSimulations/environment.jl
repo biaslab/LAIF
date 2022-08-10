@@ -1,5 +1,3 @@
-using ForneyLab: softmax
-
 epsilon = exp(-16)
 
 function soften(a::Vector)

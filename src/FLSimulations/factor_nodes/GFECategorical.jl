@@ -1,8 +1,14 @@
 using ForneyLab: SoftFactor, generateId, @ensureVariables, addNode!, associate!
 
-import ForneyLab: slug, averageEnergy
+import ForneyLab: slug, averageEnergy, requiresBreaker, breakerParameters, softmax
 
 export GFECategorical
+
+function softmax(v::Vector)
+    r = v .- maximum(v)
+    clamp!(r, -100.0, 0.0)
+    exp.(r)./sum(exp.(r))
+end
 
 """
 Description:
@@ -30,9 +36,12 @@ mutable struct GFECategorical <: SoftFactor
     interfaces::Vector{Interface}
     i::Dict{Symbol,Interface}
 
-    function GFECategorical(out, A, c; id=generateId(GFECategorical))
+    n_factors::Int64 # Number of categories (for initialization)
+    n_iterations::Union{Int64, Nothing} # Number of Newton iterations
+
+    function GFECategorical(out, A, c; id=generateId(GFECategorical), n_factors=2, n_iterations=nothing)
         @ensureVariables(out, A, c)
-        self = new(id, Array{Interface}(undef, 3), Dict{Symbol,Interface}())
+        self = new(id, Array{Interface}(undef, 3), Dict{Symbol,Interface}(), n_factors, n_iterations)
         addNode!(currentGraph(), self)
         self.i[:out] = self.interfaces[1] = associate!(Interface(self), out)
         self.i[:A] = self.interfaces[2] = associate!(Interface(self), A)
@@ -43,6 +52,11 @@ mutable struct GFECategorical <: SoftFactor
 end
 
 slug(::Type{GFECategorical}) = "GFECat"
+
+# A breaker message is required if interface is partnered with a GFE node
+requiresBreaker(interface::Interface, partner_interface::Interface, partner_node::GFECategorical) = true
+
+breakerParameters(interface::Interface, partner_interface::Interface, partner_node::GFECategorical) = (Message{Categorical, Univariate}, (partner_node.n_factors,)) # Defaults to two factors
 
 # Average energy functional
 function averageEnergy(::Type{GFECategorical}, 
