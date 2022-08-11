@@ -111,7 +111,6 @@ function msgGFECategoricalOut(d::Vector, s_0::Vector, A::Matrix, c::Vector, n_it
     # Root-finding problem for marginal statistics
     g(s) = s - softmax(log.(d .+ tiny) + diag(A'*log.(A .+ tiny)) + A'*log.(c .+ tiny) - A'*log.(A*s .+ tiny))
 
-    n_its = 5
     s_k_min = s_0
     for k=1:n_iterations
         s_k = s_k_min - inv(jacobian(g, s_k_min))*g(s_k_min) # Newton step for multivariate root finding    

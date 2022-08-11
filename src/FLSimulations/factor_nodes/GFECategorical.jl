@@ -1,14 +1,8 @@
 using ForneyLab: SoftFactor, generateId, @ensureVariables, addNode!, associate!
 
-import ForneyLab: slug, averageEnergy, requiresBreaker, breakerParameters, softmax
+import ForneyLab: slug, averageEnergy, requiresBreaker, breakerParameters
 
 export GFECategorical
-
-function softmax(v::Vector)
-    r = v .- maximum(v)
-    clamp!(r, -100.0, 0.0)
-    exp.(r)./sum(exp.(r))
-end
 
 """
 Description:
