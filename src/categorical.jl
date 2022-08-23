@@ -12,6 +12,7 @@ end
 # We don't want log(0) to happen
 safelog(x) = log(x + eps())
 #safelog(x) = log(x + exp(-16))
+normalize(x) x ./ sum(x)
 
 #note, why is it m_in and not q_in???
 @rule GFECategorical(:in, Marginalisation) (q_out::PointMass,q_in::DiscreteNonParametric, q_A::PointMass) = begin
