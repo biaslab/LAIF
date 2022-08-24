@@ -3,7 +3,10 @@ import ForneyLab: collectSumProductNodeInbounds, collectNaiveVariationalNodeInbo
 using ForneyLab: isClamped, assembleClamp!
 using ForwardDiff: jacobian
 
-export ruleVBGFECategoricalOut, ruleVBGFECategoricalOut
+export ruleVBGFECategoricalOut, ruleVBGFECategoricalOut,softmax
+
+# Helper function to prevent log of 0
+safelog(x) = log(clamp(x,tiny,Inf))
 
 @sumProductRule(:node_type     => GFECategorical,
                 :outbound_type => Message{Categorical},
@@ -14,7 +17,7 @@ function ruleSPGFECategoricalOutDPP(msg_out::Message{Categorical, Univariate},
                                     marg_out::Distribution{Univariate, Categorical},
                                     msg_A::Message{PointMass, MatrixVariate},
                                     msg_c::Message{PointMass, Multivariate};
-                                    n_iterations=10)
+                                    n_iterations=200)
     d = msg_out.dist.params[:p]
     s_0 = marg_out.params[:p]
     A = msg_A.dist.params[:m]
@@ -65,7 +68,7 @@ function ruleVBGFECategoricalOut(msg_out::Message{Categorical, Univariate},
                                  marg_out::Distribution{Univariate, Categorical},
                                  marg_A::Distribution{MatrixVariate, PointMass},
                                  marg_c::Distribution{Multivariate, PointMass};
-                                 n_iterations=10)
+                                 n_iterations=200)
     d = msg_out.dist.params[:p]
     s_0 = marg_out.params[:p]
     A = marg_A.params[:m]
@@ -109,16 +112,13 @@ end
 
 function msgGFECategoricalOut(d::Vector, s_0::Vector, A::Matrix, c::Vector, n_iterations::Int64)
     # Root-finding problem for marginal statistics
-    g(s) = s - softmax(log.(d .+ tiny) + diag(A'*log.(A .+ tiny)) + A'*log.(c .+ tiny) - A'*log.(A*s .+ tiny))
+    g(s) = s - softmax(safelog.(d) + diag(A'*safelog.(A)) + A'*safelog.(c) - A'*safelog.(A*s))
 
-    s_k_min = s_0
     for k=1:n_iterations
-        s_k = s_k_min - inv(jacobian(g, s_k_min))*g(s_k_min) # Newton step for multivariate root finding
-        s_k_min = s_k
+        s_0 = s_0 - inv(jacobian(g, s_0))*g(s_0) # Newton step for multivariate root finding
     end
-    s_k = s_k_min
 
     # Compute outbound message statistics
-    rho = s_k./(d .+ tiny)
+    rho = s_0 ./ (d .+ tiny)
     return rho./sum(rho)
 end
