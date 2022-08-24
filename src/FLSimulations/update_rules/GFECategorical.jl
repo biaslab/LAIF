@@ -17,7 +17,7 @@ function ruleSPGFECategoricalOutDPP(msg_out::Message{Categorical, Univariate},
                                     marg_out::Distribution{Univariate, Categorical},
                                     msg_A::Message{PointMass, MatrixVariate},
                                     msg_c::Message{PointMass, Multivariate};
-                                    n_iterations=200)
+                                    n_iterations=20)
     d = msg_out.dist.params[:p]
     s_0 = marg_out.params[:p]
     A = msg_A.dist.params[:m]
@@ -68,7 +68,7 @@ function ruleVBGFECategoricalOut(msg_out::Message{Categorical, Univariate},
                                  marg_out::Distribution{Univariate, Categorical},
                                  marg_A::Distribution{MatrixVariate, PointMass},
                                  marg_c::Distribution{Multivariate, PointMass};
-                                 n_iterations=200)
+                                 n_iterations=20)
     d = msg_out.dist.params[:p]
     s_0 = marg_out.params[:p]
     A = marg_A.params[:m]
