@@ -6,7 +6,7 @@ function softmax(v::Vector)
     exp.(r)./sum(exp.(r))
 end
 
-function evaluatePoliciesGBFE(A, B, C, D)
+function evaluatePoliciesGBFE(A, B, C, D,n_its)
     # Evaluate all policies
     F = zeros(4,4)
     for i in 1:4  # First move
@@ -22,7 +22,7 @@ function evaluatePoliciesGBFE(A, B, C, D)
         
             messages = init()
 
-            n_its = 10
+            #n_its = 10
             for k=1:n_its
                 step!(data, marginals, messages)
             end
@@ -52,7 +52,7 @@ function evaluatePoliciesEFE(A, B, C, D)
 
         for j in 1:4 # Second move
             x_t_plus_hat = B[j]*x_t_hat # Expected state
-            y_t_plus_hat = A*x_t_hat # Expected outcome
+            y_t_plus_hat = A*x_t_plus_hat # Expected outcome
 
             predicted_uncertainty_t_plus = diag(A' * log.(A .+ tiny))' * x_t_plus_hat
             predicted_divergence_t_plus = transpose( log.(y_t_plus_hat .+ tiny) - log.(C_t[2] .+ tiny) ) * y_t_plus_hat
