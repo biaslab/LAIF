@@ -52,7 +52,7 @@ function collectSumProductNodeInbounds(node::GFECategorical, entry::ScheduleEntr
         push!(inbounds, Dict{Symbol, Any}(:n_iterations => node.n_iterations,
                                           :keyword      => true))
     end
-    
+
     return inbounds
 end
 
@@ -103,7 +103,7 @@ function collectNaiveVariationalNodeInbounds(node::GFECategorical, entry::Schedu
         push!(inbounds, Dict{Symbol, Any}(:n_iterations => node.n_iterations,
                                           :keyword      => true))
     end
-    
+
     return inbounds
 end
 
@@ -113,7 +113,7 @@ function msgGFECategoricalOut(d::Vector, s_0::Vector, A::Matrix, c::Vector, n_it
 
     s_k_min = s_0
     for k=1:n_iterations
-        s_k = s_k_min - inv(jacobian(g, s_k_min))*g(s_k_min) # Newton step for multivariate root finding    
+        s_k = s_k_min - inv(jacobian(g, s_k_min))*g(s_k_min) # Newton step for multivariate root finding
         s_k_min = s_k
     end
     s_k = s_k_min
