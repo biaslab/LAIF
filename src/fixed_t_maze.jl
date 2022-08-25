@@ -2,14 +2,7 @@ using Pkg;Pkg.activate(".");Pkg.instantiate()
 using ReactiveMP,GraphPPL,Rocket, LinearAlgebra, OhMyREPL, Distributions
 enable_autocomplete_brackets(false)
 
-# Thijs softmax
-function softmax(v::Vector)
-    r = v .- maximum(v)
-    clamp!(r, -100.0, 0.0)
-    exp.(r)./sum(exp.(r))
-end
-
-include("categorical.jl")
+include("GFECategorical.jl")
 include("helpers.jl")
 
 T = 2;
@@ -28,6 +21,7 @@ end
 end
 
 
+# TODO rewrite this for arbitrary T
 @model function t_maze(A,B,C,T)
     Ac = constvar(A)
 
@@ -56,13 +50,11 @@ end
 end
 
 initmarginals = (
-                 z = [Categorical(fill(1. /8. ,8)) for t in 1:T]
-                 ,
+                 z = [Categorical(fill(1. /8. ,8)) for t in 1:T],
                 );
 
 initmessages = (
-                 z = [Categorical(fill(1. /8. ,8)) for t in 1:T]
-                 ,
+                 z = [Categorical(fill(1. /8. ,8)) for t in 1:T],
              );
 
 # Try with all policies and evaluate EFE for each.
@@ -73,7 +65,6 @@ function evaluate_policies(B,its)
             imodel = Model(t_maze,A,[B[i],B[j]],C,T)
 
             result = inference(model = imodel, data= (d = D,), initmarginals = initmarginals, initmessages = initmessages,free_energy=true, iterations = its)
-            #result = inference(model = imodel, data= (d = D,), initmarginals = initmarginals, free_energy=true, iterations = its)
 
             F[i,j] =result.free_energy[end] ./log(2)
         end
