@@ -27,46 +27,46 @@ function constructABCD(α::Float64, c::Float64)
     A[13:16, 7:8] = A_4
 
     # Transition model (original)
-#     B_1 = kron([1 0 0 1; # Row: can I move to 1?
-#                 0 1 0 0;
-#                 0 0 1 0;
-#                 0 0 0 0], I(2))
-
-#     B_2 = kron([0 0 0 0; 
-#                 1 1 0 1; # Row: can I move to 2?
-#                 0 0 1 0;
-#                 0 0 0 0], I(2))
-
-#     B_3 = kron([0 0 0 0;
-#                 0 1 0 0;
-#                 1 0 1 1; # Row: can I move to 3?
-#                 0 0 0 0], I(2))
-
-#     B_4 = kron([0 0 0 0;
-#                 0 1 0 0;
-#                 0 0 1 0;
-#                 1 0 0 1], I(2)) # Row: can I move to 4?
-
-#     # Transition model (adjusted)
-    B_1 = kron([1 1 1 1; # Row: can I move to 1?
-                0 0 0 0;
-                0 0 0 0;
+    B_1 = kron([1 0 0 1; # Row: can I move to 1?
+                0 1 0 0;
+                0 0 1 0;
                 0 0 0 0], I(2))
 
-    B_2 = kron([0 1 1 0; 
-                1 0 0 1; # Row: can I move to 2?
-                0 0 0 0;
+    B_2 = kron([0 0 0 0; 
+                1 1 0 1; # Row: can I move to 2?
+                0 0 1 0;
                 0 0 0 0], I(2))
 
-    B_3 = kron([0 1 1 0;
-                0 0 0 0;
-                1 0 0 1; # Row: can I move to 3?
+    B_3 = kron([0 0 0 0;
+                0 1 0 0;
+                1 0 1 1; # Row: can I move to 3?
                 0 0 0 0], I(2))
 
-    B_4 = kron([0 1 1 0;
-                0 0 0 0;
-                0 0 0 0;
+    B_4 = kron([0 0 0 0;
+                0 1 0 0;
+                0 0 1 0;
                 1 0 0 1], I(2)) # Row: can I move to 4?
+
+    # Transition model (adjusted)
+#     B_1 = kron([1 1 1 1; # Row: can I move to 1?
+#                 0 0 0 0;
+#                 0 0 0 0;
+#                 0 0 0 0], I(2))
+
+#     B_2 = kron([0 1 1 0; 
+#                 1 0 0 1; # Row: can I move to 2?
+#                 0 0 0 0;
+#                 0 0 0 0], I(2))
+
+#     B_3 = kron([0 1 1 0;
+#                 0 0 0 0;
+#                 1 0 0 1; # Row: can I move to 3?
+#                 0 0 0 0], I(2))
+
+#     B_4 = kron([0 1 1 0;
+#                 0 0 0 0;
+#                 0 0 0 0;
+#                 1 0 0 1], I(2)) # Row: can I move to 4?
 
     B = [B_1, B_2, B_3, B_4]
 

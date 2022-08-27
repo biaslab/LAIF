@@ -119,6 +119,6 @@ function msgGFECategoricalOut(d::Vector, s_0::Vector, A::Matrix, c::Vector, n_it
     s_k = s_k_min
 
     # Compute outbound message statistics
-    rho = s_k./(d .+ tiny)
+    rho = s_k./(d .+ 1e-6)
     return rho./sum(rho)
 end

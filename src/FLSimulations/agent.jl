@@ -6,19 +6,25 @@ function softmax(v::Vector)
     exp.(r)./sum(exp.(r))
 end
 
-function evaluatePoliciesGBFE(A, B, C, D)
+# Symmetry breaking for initial statistics
+function asym(n::Int64)
+    p = ones(n) .+ 1e-3*randn(n)
+    return p./sum(p)
+end
+
+function evaluatePoliciesGBFE(A, B, C_t, D)
     # Evaluate all policies
     F = zeros(4,4)
     for i in 1:4  # First move
         for j = 1:4  # Second move
             data = Dict(:u       => [B[i], B[j]],
                         :A       => A,
-                        :C       => [C, C],
+                        :C       => C_t,
                         :D_t_min => D)
 
             marginals = Dict{Symbol, ProbabilityDistribution}(
-                :x_1 => ProbabilityDistribution(Univariate, Categorical, p=ones(8)./8),
-                :x_2 => ProbabilityDistribution(Univariate, Categorical, p=ones(8)./8))
+                :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
+                :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)))
         
             messages = init()
 
@@ -34,9 +40,8 @@ function evaluatePoliciesGBFE(A, B, C, D)
     return F./log(2) # Convert to bits
 end
 
-function evaluatePoliciesEFE(A, B, C, D)
+function evaluatePoliciesEFE(A, B, C_t, D)
     # Construct priors
-    C_t = [C, C]
     D_t_min = D
     
     # Evaluate all policies
@@ -65,19 +70,19 @@ function evaluatePoliciesEFE(A, B, C, D)
     return -Q./log(2) # Return expected free energy per policy in bits
 end
 
-function evaluatePoliciesGMFE(A, B, C, D)
+function evaluatePoliciesGMFE(A, B, C_t, D)
     # Evaluate all policies
     F = zeros(4,4)
     for i in 1:4  # First move
         for j = 1:4  # Second move
             data = Dict(:u       => [B[i], B[j]],
                         :A       => A,
-                        :C       => [C, C],
+                        :C       => C_t,
                         :D_t_min => D)
 
             marginals = Dict{Symbol, ProbabilityDistribution}(
-                :x_1 => ProbabilityDistribution(Univariate, Categorical, p=ones(8)./8),
-                :x_2 => ProbabilityDistribution(Univariate, Categorical, p=ones(8)./8))
+                :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
+                :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)))
         
             n_its = 10
             for k=1:n_its
@@ -93,14 +98,14 @@ function evaluatePoliciesGMFE(A, B, C, D)
     return F./log(2) # Convert to bits
 end
 
-function evaluatePoliciesBFE(A, B, C, D)
+function evaluatePoliciesBFE(A, B, C_t, D)
     # Evaluate all policies
     F = zeros(4,4)
     for i in 1:4  # First move
         for j = 1:4  # Second move
             data = Dict(:u       => [B[i], B[j]],
                         :A       => A,
-                        :C       => [C, C],
+                        :C       => C_t,
                         :D_t_min => D)
 
             marginals = step!(data)
