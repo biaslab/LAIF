@@ -45,6 +45,9 @@ mutable struct GFECategorical <: SoftFactor
     end
 end
 
+# Helper function to prevent safelog of 0
+safelog(x) = log(clamp(x,tiny,Inf))
+
 slug(::Type{GFECategorical}) = "GFECat"
 
 # A breaker message is required if interface is partnered with a GFE node
@@ -53,14 +56,14 @@ requiresBreaker(interface::Interface, partner_interface::Interface, partner_node
 breakerParameters(interface::Interface, partner_interface::Interface, partner_node::GFECategorical) = (Message{Categorical, Univariate}, (partner_node.n_factors,)) # Defaults to two factors
 
 # Average energy functional
-function averageEnergy(::Type{GFECategorical}, 
-                       marg_out::Distribution{Univariate, Categorical}, 
+function averageEnergy(::Type{GFECategorical},
+                       marg_out::Distribution{Univariate, Categorical},
                        marg_A::Distribution{MatrixVariate, PointMass},
                        marg_c::Distribution{Multivariate, PointMass})
-    
+
     s = marg_out.params[:p]
     A = marg_A.params[:m]
     c = marg_c.params[:m]
 
-    -s'*diag(A'*log.(A .+ tiny)) - (A*s)'*log.(c .+ tiny) + (A*s)'*log.(A*s .+ tiny)
+    -s'*diag(A'*safelog.(A)) - (A*s)'*safelog.(c) + (A*s)'*safelog.(A*s)
 end

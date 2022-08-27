@@ -1,19 +1,20 @@
 using Pkg;Pkg.activate(".");Pkg.instantiate()
 using ReactiveMP,GraphPPL,Rocket, LinearAlgebra, OhMyREPL, Distributions
 enable_autocomplete_brackets(false)
+
+# Thijs softmax
+function softmax(v::Vector)
+    r = v .- maximum(v)
+    clamp!(r, -100.0, 0.0)
+    exp.(r)./sum(exp.(r))
+end
+
 include("categorical.jl")
 include("helpers.jl")
 
 T = 2;
 
 A,B,C,D = constructABCD(0.9,[2.0,2.0],T);
-
-#A = Matrix{Float64}(vcat(I(8),I(8)))
-
-# Workaround for ReactiveMP being unable to compute FE when D contains 0 entries
-DD = ones(8) * eps();
-DD[1:2] .= 0.5 - eps() * 6;
-DD;
 
 # Variatonal update rules for messing with VMP
 @rule Transition(:in, Marginalisation) (q_out::DiscreteNonParametric, q_a::PointMass) = begin
@@ -26,35 +27,53 @@ end
     return Categorical(a ./ sum(a))
 end
 
-# Try with all policies and evaluate EFE for each.
-# Try with the EFE evaluation from the paper
-@model function t_maze(A,D,B,T)
+
+@model function t_maze(A,B,C,T)
     Ac = constvar(A)
 
-    z_0 ~ Categorical(D)
+    d = datavar(Vector{Float64})
+
+    z_0 ~ Categorical(d)
     z = randomvar(T)
 
-    x = datavar(Vector{Float64}, T)
+    #x = datavar(Vector{Float64}, T)
+    x_1 = constvar(C[1])
+    x_2 = constvar(C[2])
+
+    #x = randomvar(T)
     z_prev = z_0
 
-    for t in 1:T
-        z[t] ~ Transition(z_prev,B[t])
-        x[t] ~ GFECategorical(z[t], Ac) where {pipeline=RequireMarginal(in = Categorical(fill(1. /8. ,8)))}
-        z_prev = z[t]
-    end
+    z[1] ~ Transition(z_0,B[1])
+    x_1 ~ GFECategorical(z[1], A) where {pipeline=RequireEverythingFunctionalDependencies()}
+
+    z[2] ~ Transition(z[1],B[2])
+    x_2 ~ GFECategorical(z[2], A) where {pipeline=RequireEverythingFunctionalDependencies()}
+    #for t in 1:T
+    #    z[t] ~ Transition(z_prev,B[t])
+    #    x[t] ~ GFECategorical(z[t], A) where {pipeline=RequireEverythingFunctionalDependencies()}
+    #    z_prev = z[t]
+    #end
 end
 
-#@constraints function efe_constraints()
-#    q(z_0, z) = q(z_0)q(z)
-#end
+initmarginals = (
+                 z = [Categorical(fill(1. /8. ,8)) for t in 1:T]
+                 ,
+                );
 
+initmessages = (
+                 z = [Categorical(fill(1. /8. ,8)) for t in 1:T]
+                 ,
+             );
 
+# Try with all policies and evaluate EFE for each.
 function evaluate_policies(B,its)
     F = zeros(4,4)
     for i in 1:4
         for j in 1:4
-            imodel = Model(t_maze,A,D,[B[i],B[j]],T)
-            result = inference(model = imodel, data= (x = C,),free_energy=true,iterations=its)
+            imodel = Model(t_maze,A,[B[i],B[j]],C,T)
+
+            result = inference(model = imodel, data= (d = D,), initmarginals = initmarginals, initmessages = initmessages,free_energy=true, iterations = its)
+            #result = inference(model = imodel, data= (d = D,), initmarginals = initmarginals, free_energy=true, iterations = its)
 
             F[i,j] =result.free_energy[end] ./log(2)
         end
@@ -62,5 +81,6 @@ function evaluate_policies(B,its)
 F
 end
 
-evaluate_policies(B,10)
-argmin(evaluate_policies(B,10))
+Fmap = evaluate_policies(B,20)
+argmin(Fmap)
+

@@ -57,7 +57,7 @@ function evaluatePoliciesEFE(A, B, C_t, D)
 
         for j in 1:4 # Second move
             x_t_plus_hat = B[j]*x_t_hat # Expected state
-            y_t_plus_hat = A*x_t_hat # Expected outcome
+            y_t_plus_hat = A*x_t_plus_hat # Expected outcome
 
             predicted_uncertainty_t_plus = diag(A' * log.(A .+ tiny))' * x_t_plus_hat
             predicted_divergence_t_plus = transpose( log.(y_t_plus_hat .+ tiny) - log.(C_t[2] .+ tiny) ) * y_t_plus_hat
