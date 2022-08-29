@@ -1,6 +1,7 @@
 [deps]
 ForneyLab = "9fc3f58a-c2cc-5bff-9419-6a294fefdca9"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OhMyREPL = "5fb14364-9ced-5910-84b2-373655c76a03"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
