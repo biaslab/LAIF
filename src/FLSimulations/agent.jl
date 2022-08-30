@@ -8,11 +8,11 @@ end
 
 # Symmetry breaking for initial statistics
 function asym(n::Int64)
-    p = ones(n) .+ 1e-3*randn(n)
+    p = ones(n) .+ 1e-3*rand(n)
     return p./sum(p)
 end
 
-function evaluatePoliciesGBFE(A, B, C_t, D)
+function evaluatePoliciesGBFE(A, B, C_t, D; n_its=10)
     # Evaluate all policies
     F = zeros(4,4)
     for i in 1:4  # First move
@@ -23,12 +23,12 @@ function evaluatePoliciesGBFE(A, B, C_t, D)
                         :D_t_min => D)
 
             marginals = Dict{Symbol, ProbabilityDistribution}(
+                :x_t_min => ProbabilityDistribution(Univariate, Categorical, p=D),
                 :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
                 :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)))
         
             messages = init()
 
-            n_its = 10
             for k=1:n_its
                 step!(data, marginals, messages)
             end
@@ -70,7 +70,7 @@ function evaluatePoliciesEFE(A, B, C_t, D)
     return -Q./log(2) # Return expected free energy per policy in bits
 end
 
-function evaluatePoliciesGMFE(A, B, C_t, D)
+function evaluatePoliciesGMFE(A, B, C_t, D; n_its=10)
     # Evaluate all policies
     F = zeros(4,4)
     for i in 1:4  # First move
@@ -81,10 +81,10 @@ function evaluatePoliciesGMFE(A, B, C_t, D)
                         :D_t_min => D)
 
             marginals = Dict{Symbol, ProbabilityDistribution}(
+                :x_t_min => ProbabilityDistribution(Univariate, Categorical, p=D),
                 :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
                 :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)))
         
-            n_its = 10
             for k=1:n_its
                 stepX0!(data, marginals)
                 stepX1!(data, marginals)
