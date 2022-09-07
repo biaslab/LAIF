@@ -66,3 +66,9 @@ result = inference(model = imodel, data= (x = C,), initmarginals = initmarginals
 result.posteriors[:switch][end][1]
 result.posteriors[:switch][end][2]
 
+
+# Try without pointmass constraints, still works
+result = inference(model = imodel, data= (x = C,), initmarginals = initmarginals, initmessages = initmessages, iterations=2)
+
+probvec(result.posteriors[:switch][end][1])
+probvec(result.posteriors[:switch][end][2])
