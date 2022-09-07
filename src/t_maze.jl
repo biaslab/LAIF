@@ -1,7 +1,24 @@
-using Pkg;Pkg.activate(".");Pkg.instantiate();
+using Pkg;Pkg.activate("..");Pkg.instantiate();
 using ReactiveMP,GraphPPL,Rocket, LinearAlgebra, OhMyREPL, Distributions;
-
 enable_autocomplete_brackets(false);
+
+# Need to make pointmass constraints for discrete vars
+import ReactiveMP.default_point_mass_form_constraint_optimizer
+
+function default_point_mass_form_constraint_optimizer(
+    ::Type{Univariate},
+    ::Type{Discrete},
+    constraint::PointMassFormConstraint,
+    distribution
+)
+
+out = zeros( length(probvec(distribution)))
+out[argmax(probvec(distribution))] = 1.
+
+PointMass(out)
+end
+
+
 include("transition_mixture.jl");
 include("GFECategorical.jl");
 include("helpers.jl");
@@ -39,8 +56,13 @@ initmessages = (
 
 imodel = Model(t_maze,A,D,B[1],B[2],B[3],B[4],T);
 
-result = inference(model = imodel, data= (x = C,), initmarginals = initmarginals, initmessages = initmessages)
+@constraints function pointmass_q()
+    q(switch) :: PointMass
+end
 
-probvec(result.posteriors[:z][1][2])
-probvec(result.posteriors[:switch][1][1])
-probvec(result.posteriors[:switch][1][2])
+result = inference(model = imodel, data= (x = C,), initmarginals = initmarginals, initmessages = initmessages, constraints=pointmass_q(), iterations=2)
+
+# BEHOLD!!!!
+result.posteriors[:switch][end][1]
+result.posteriors[:switch][end][2]
+
