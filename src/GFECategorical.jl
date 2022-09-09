@@ -4,6 +4,7 @@ using ForwardDiff: jacobian
 # We don't want log(0) to happen
 safelog(x) = log(clamp(x,tiny,Inf))
 normalize(x) = x ./ sum(x)
+softmax(x) = exp.(x) ./ sum(exp.(x))
 
 struct ForwardOnlyMeta end
 
