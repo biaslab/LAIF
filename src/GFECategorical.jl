@@ -4,6 +4,9 @@ using ForwardDiff: jacobian
 # We don't want log(0) to happen
 safelog(x) = log(clamp(x,tiny,Inf))
 normalize(x) = x ./ sum(x)
+softmax(x) = exp.(x) ./ sum(exp.(x))
+
+struct ForwardOnlyMeta end
 
 struct GFECategorical end
 @node GFECategorical Stochastic [out,in,A]
@@ -38,4 +41,9 @@ end
 
     ρ = z_k ./ (d .+ tiny)
     return Categorical(ρ ./ sum(ρ))
+end
+
+# Block backwards rule
+@rule GFECategorical(:in, Marginalisation) (m_out::PointMass, q_out::PointMass,m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::PointMass, q_A::PointMass, meta::ForwardOnlyMeta) = begin
+    return missing
 end

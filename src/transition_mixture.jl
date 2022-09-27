@@ -84,3 +84,19 @@ end
     return Categorical(p ./ sum(p))
 end
 
+@rule TransitionMixture(:out, Marginalisation) (m_in::DiscreteNonParametric,m_z::PointMass,q_B1::PointMass,q_B2::PointMass,q_B3::PointMass,q_B4::PointMass,) = begin
+
+    z = argmax(m_z.point)
+
+    # Hacky McHackface
+    B1 = mean(q_B1)
+    B2 = mean(q_B2)
+    B3 = mean(q_B3)
+    B4 = mean(q_B4)
+    Bs = [B1,B2,B3,B4]
+
+    p = Bs[z] * probvec(m_in)
+
+    return Categorical(p ./ sum(p))
+end
+
