@@ -1,5 +1,5 @@
 using ForneyLab: SoftFactor, generateId, @ensureVariables, addNode!, associate!
-import ForneyLab: slug, averageEnergy, requiresBreaker, breakerParameters, sample, unsafeLogMean
+import ForneyLab: slug, averageEnergy, requiresBreaker, breakerParameters, sample, unsafeMean, unsafeLogMean
 
 export DiscreteObservation
 
@@ -80,6 +80,14 @@ function sample(dist::Distribution{MatrixVariate, Dirichlet})
         A[:,i] = sample(Distribution(Multivariate, Dirichlet, a=dist.params[:a][:,i]))
     end
     return A
+end
+
+function unsafeMean(dist::Distribution{MatrixVariate, SampleList})
+    sum = zeros(size(dist.params[:s][1]))
+    for i=1:length(dist.params[:s])
+        sum = sum .+ dist.params[:s][i].*dist.params[:w][i]
+    end
+    return sum
 end
 
 function unsafeLogMean(dist::Distribution{MatrixVariate, SampleList})

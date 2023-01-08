@@ -14,7 +14,7 @@ end
 
 function evaluatePoliciesGBFE(A, B, C_t, D; n_its=10)
     # Evaluate all policies
-    F = zeros(4,4)
+    G = zeros(4,4)
     for i in 1:4  # First move
         for j = 1:4  # Second move
             data = Dict(:u       => [B[i], B[j]],
@@ -33,16 +33,17 @@ function evaluatePoliciesGBFE(A, B, C_t, D; n_its=10)
                 step!(data, marginals, messages)
             end
         
-            F[i, j] = freeEnergy(data, marginals)
+            G[i, j] = freeEnergy(data, marginals)
         end
     end
 
-    return F./log(2) # Convert to bits
+    return G./log(2) # Convert to bits
 end
 
+# Evaluation includes parameter estimate
 function evaluatePoliciesFullGBFE(A, B, C, D; n_its=10)
     # Evaluate all policies
-    F = zeros(4,4)
+    G = zeros(4,4)
     for i in 1:4  # First move
         for j = 1:4  # Second move
             data = Dict(:u       => [B[i], B[j]],
@@ -59,20 +60,20 @@ function evaluatePoliciesFullGBFE(A, B, C, D; n_its=10)
             
             messages = initX()
             
-            F_temp = zeros(n_its)
+            Gs = zeros(n_its)
             for k=1:n_its
                 stepX!(data, marginals, messages)
                 stepC!(data, marginals, messages)
                 stepA!(data, marginals, messages)
 
-                F_temp[k] = freeEnergy(data, marginals)
+                Gs[k] = freeEnergy(data, marginals)
             end
                                 
-            F[i, j] = mean(F_temp[5:n_its])
+            G[i, j] = mean(Gs[5:n_its])
         end
     end
 
-    return F./log(2) # Convert to bits
+    return G./log(2) # Convert to bits
 end
 
 function evaluatePoliciesEFE(A, B, C_t, D)
@@ -107,7 +108,7 @@ end
 
 function evaluatePoliciesGMFE(A, B, C_t, D; n_its=10)
     # Evaluate all policies
-    F = zeros(4,4)
+    G = zeros(4,4)
     for i in 1:4  # First move
         for j = 1:4  # Second move
             data = Dict(:u       => [B[i], B[j]],
@@ -126,11 +127,11 @@ function evaluatePoliciesGMFE(A, B, C_t, D; n_its=10)
                 stepX2!(data, marginals)
             end
         
-            F[i, j] = freeEnergy(data, marginals)
+            G[i, j] = freeEnergy(data, marginals)
         end
     end
 
-    return F./log(2) # Convert to bits
+    return G./log(2) # Convert to bits
 end
 
 function evaluatePoliciesBFE(A, B, C_t, D)
@@ -150,4 +151,65 @@ function evaluatePoliciesBFE(A, B, C_t, D)
     end
 
     return F./log(2) # Convert to bits
+end
+
+function initializeAgent(A, B, C, D)
+    n_its = 10
+    function plan()
+        # Evaluate all policies
+        G = zeros(4,4)
+        for i in 1:4  # First move
+            for j = 1:4  # Second move
+                data = Dict(:u       => [B[i], B[j]],
+                            :A       => A,
+                            :C       => C_t,
+                            :D_t_min => D_t_min)
+
+                marginals = Dict{Symbol, ProbabilityDistribution}(
+                    :x_t_min => ProbabilityDistribution(Univariate, Categorical, p=D),
+                    :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
+                    :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)))
+                
+                messages = initPlan()
+                                        
+                Gs = zeros(n_its)
+                for k=1:n_its
+                    stepPlan!(data, marginals, messages)
+                    Gs[k] = freeEnergyPlan(data, marginals)
+                end
+                Gs = Gs./log(2) # Convert to bits                
+
+                G[i, j] = mean(Gs[5:n_its]) # Average to smooth fluctuations
+            end
+        end
+
+        return G./log(2) # Return free energy in bits
+    end
+
+    function act(G::Matrix{Float64})
+        # We include policy selection in the act function for clearer code; procedurally, policy selection belongs in the plan step
+        p = softmax(vec(-100*G)) # Determine policy probabilities with high precision (max selection)
+        S = reshape(sample(ProbabilityDistribution(Categorical, p=p)), 4, 4) # Reshaped policy sample
+        (_, pol) = findmax(S)
+
+        return pol[1] # Return first action of policy
+    end
+
+    D_t_min = D
+    C_t = [C, C]
+    function slide(a_t::Int64, o_t::Vector{Float64})
+        # Estimate state
+        data = Dict(:B_t     => B[a_t],
+                    :A       => A,
+                    :o_t     => o_t,
+                    :D_t_min => D_t_min)
+        marginals = stepSlide!(data)
+        D_t_min = ForneyLab.unsafeMean(marginals[:x_t]) # Reset prior state statistics
+        
+        # Shift goals for next move
+        C_t = circshift(C_t, -1)
+        C_t[end] = C
+    end
+
+    return (plan, act, slide)
 end

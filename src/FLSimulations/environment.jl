@@ -26,28 +26,7 @@ function constructABCD(α::Float64, c::Float64)
     A[9:12, 5:6]  = A_3
     A[13:16, 7:8] = A_4
 
-    # Transition model (original)
-#     B_1 = kron([1 0 0 1; # Row: can I move to 1?
-#                 0 1 0 0;
-#                 0 0 1 0;
-#                 0 0 0 0], I(2))
-
-#     B_2 = kron([0 0 0 0; 
-#                 1 1 0 1; # Row: can I move to 2?
-#                 0 0 1 0;
-#                 0 0 0 0], I(2))
-
-#     B_3 = kron([0 0 0 0;
-#                 0 1 0 0;
-#                 1 0 1 1; # Row: can I move to 3?
-#                 0 0 0 0], I(2))
-
-#     B_4 = kron([0 0 0 0;
-#                 0 1 0 0;
-#                 0 0 1 0;
-#                 1 0 0 1], I(2)) # Row: can I move to 4?
-
-    # Transition model (adjusted)
+    # Transition model (with forced move back after reward-arm visit)
     B_1 = kron([1 1 1 1; # Row: can I move to 1?
                 0 0 0 0;
                 0 0 0 0;
@@ -79,5 +58,29 @@ function constructABCD(α::Float64, c::Float64)
     D = kron([1.0, 0.0, 0.0, 0.0], [0.5, 0.5])
 
     return (A, B, C, D)
+end
+
+function initializeWorld(A, B, C, D)
+    r = [0, 1] # Reward position (2, 3)
+
+    # Initial state
+    x_0 = zeros(8)
+    x_0[1:2] = r # Start from position 1
+
+    # Execute a move to position a_t
+    x_t_min = x_0
+    function execute(a_t::Int64)
+        x_t = B[a_t]*x_t_min # State transition
+        o_t = A*x_t # Observation
+        r_t = o_t'*kron(ones(4), [0.0, 0.0, 1.0, 0.0]) # Probability of reward
+
+        x_t_min = x_t # Reset state for next step
+    end
+
+    o_t = A*x_0
+    r_t = 0.0
+    observe() = (o_t, r_t)
+
+    return (execute, observe)
 end
 ;
