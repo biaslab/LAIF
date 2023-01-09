@@ -61,7 +61,21 @@ function constructABCD(α::Float64, c::Float64)
 end
 
 function initializeWorld(A, B, C, D)
-    r = [0, 1] # Reward position (2, 3)
+    function reset()
+       if rand() > 0.5
+           r = [0, 1]
+       else
+           r = [1, 0]
+       end
+       x_0 = zeros(8)
+       x_0[1:2] = r
+       x_t_min = x_0
+       o_t = A*x_0
+       r_t = 0.0
+    end
+
+    # Set reward position
+    r = [0, 1]
 
     # Initial state
     x_0 = zeros(8)
@@ -81,6 +95,6 @@ function initializeWorld(A, B, C, D)
     r_t = 0.0
     observe() = (o_t, r_t)
 
-    return (execute, observe)
+    return (reset, execute, observe)
 end
 ;

@@ -12,8 +12,22 @@ function asym(n::Int64)
     return p./sum(p)
 end
 
+asym(A::Matrix) = A + 0.05*rand(size(A)...)
+
+function constructAPrior()
+    A_0_4 = [1.0 0.0;
+             0.0 1.0;
+             0.0 0.0;
+             0.0 0.0]
+
+    A_0 = 0.1*ones(16, 8)
+    A_0[13:16, 7:8] = A_0_4 .+ 0.1 # Hint that position 4 resolves information
+
+    return A_0
+end
+
 function initializeAgent(A_0, B, C, D)
-    D_t_min = D
+    D_t_min = deepcopy(D)
     n_its = 10
     A_s = deepcopy(A_0)
     function infer(t::Int64, a::Vector, o::Vector)
@@ -31,7 +45,7 @@ function initializeAgent(A_0, B, C, D)
                         :x_t_min => ProbabilityDistribution(Univariate, Categorical, p=D),
                         :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
                         :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
-                        :A => ProbabilityDistribution(MatrixVariate, Dirichlet, a=A_s))
+                        :A => ProbabilityDistribution(MatrixVariate, Dirichlet, a=asym(A_s)))
                     
                     messages = initt1X()
                                             
@@ -46,6 +60,11 @@ function initializeAgent(A_0, B, C, D)
                     G[i, j] = mean(Gs[5:n_its]) # Average to smooth fluctuations
                 end
             end
+
+            # Disallow illegal moves
+            G[2,2] = G[2,3] = G[2,4] = 100.0
+            G[3,2] = G[3,3] = G[3,4] = 100.0
+
             return G./log(2) # Return free energy in bits
         elseif t == 2
             G = zeros(4)
@@ -60,7 +79,7 @@ function initializeAgent(A_0, B, C, D)
                     :x_t_min => ProbabilityDistribution(Univariate, Categorical, p=D),
                     :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
                     :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
-                    :A => ProbabilityDistribution(MatrixVariate, Dirichlet, a=A_s))
+                    :A => ProbabilityDistribution(MatrixVariate, Dirichlet, a=asym(A_s)))
                 
                 messages = initt2X()
                                         
@@ -74,6 +93,12 @@ function initializeAgent(A_0, B, C, D)
 
                 G[j] = mean(Gs[5:n_its]) # Average to smooth fluctuations
             end
+
+            # Disallow illegal move
+            if a[1] in [2,3]
+                G[2] = G[3] = G[4] = 100.0
+            end
+
             return G./log(2) # Return free energy in bits
         elseif t == 3
             data = Dict(:u       => [B[a[1]], B[a[2]]],
@@ -86,17 +111,15 @@ function initializeAgent(A_0, B, C, D)
                 :x_t_min => ProbabilityDistribution(Univariate, Categorical, p=D),
                 :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
                 :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
-                :A => ProbabilityDistribution(MatrixVariate, Dirichlet, a=A_s))
+                :A => ProbabilityDistribution(MatrixVariate, Dirichlet, a=asym(A_s)))
 
-            messages = initt2X()
-                                    
             for k=1:n_its
-                stept2X!(data, marginals, messages)
-                stept2A!(data, marginals)
+                stept3X!(data, marginals)
+                stept3A!(data, marginals)
             end
-            println(round.(unsafeMean(marginals[:A]), digits=2))
+            A_s = deepcopy(marginals[:A].params[:a]) # Reset for next simulation
 
-            return 0.0
+            return A_s # Return posterior statistics
         end
     end
 
