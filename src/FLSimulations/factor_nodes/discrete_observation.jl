@@ -1,5 +1,5 @@
 using ForneyLab: SoftFactor, generateId, @ensureVariables, addNode!, associate!
-import ForneyLab: slug, averageEnergy, requiresBreaker, breakerParameters, sample, unsafeMean, unsafeLogMean
+import ForneyLab: slug, averageEnergy, requiresBreaker, breakerParameters
 
 export DiscreteObservation
 
@@ -46,9 +46,6 @@ mutable struct DiscreteObservation <: EpistemicFactor
     end
 end
 
-# Helper function to prevent log of 0
-safelog(x) = log(clamp(x,tiny,Inf))
-
 slug(::Type{DiscreteObservation}) = "DO"
 
 # A breaker message is required if interface is partnered with a DO node out interface
@@ -67,33 +64,4 @@ function averageEnergy(::Type{DiscreteObservation},
     log_c = unsafeLogMean(marg_c)
 
     (A*s)'*safelog.(A*s) - s'*diag(A'*safelog.(A)) - (A*s)'*log_c
-end
-
-
-#--------------
-# FL Extensions
-#--------------
-
-function sample(dist::Distribution{MatrixVariate, Dirichlet})
-    A = similar(dist.params[:a])
-    for i = 1:size(A)[2]
-        A[:,i] = sample(Distribution(Multivariate, Dirichlet, a=dist.params[:a][:,i]))
-    end
-    return A
-end
-
-function unsafeMean(dist::Distribution{MatrixVariate, SampleList})
-    sum = zeros(size(dist.params[:s][1]))
-    for i=1:length(dist.params[:s])
-        sum = sum .+ dist.params[:s][i].*dist.params[:w][i]
-    end
-    return sum
-end
-
-function unsafeLogMean(dist::Distribution{MatrixVariate, SampleList})
-    sum = zeros(size(dist.params[:s][1]))
-    for i=1:length(dist.params[:s])
-        sum = sum .+ log.(dist.params[:s][i]).*dist.params[:w][i]
-    end
-    return sum
 end

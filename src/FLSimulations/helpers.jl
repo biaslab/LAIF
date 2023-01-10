@@ -1,84 +1,85 @@
-using LaTeXStrings
+using StatsFuns: gammainvcdf, loggamma
+import ForneyLab: ruleSPEqualityFnFactor, sample, logPdf, sampleWeightsAndEntropy, sample, unsafeMean, unsafeLogMean
 
-function plotResults(F; dpi=100, clim=(4.0,8.0), title="", highlight=nothing)
-    p = heatmap(F,
-            dpi=dpi,
-            color=:grays, 
-            aspect_ratio=:equal, 
-            xlim=(0.5,4.5), 
-            ylim=(0.5,4.5), 
-            xlabel=L"\mathrm{Second\,Move\,} (\hat{u}_2)",
-            ylabel=L"\mathrm{First\,Move\,} (\hat{u}_1)",
-            title=title,
-            clim=clim,
-            xtickfontsize=12,
-            ytickfontsize=12,
-            xguidefontsize=14,
-            yguidefontsize=14,
-            size=(500,430))
+# Edit: add tiny to x
+logPdf(dist::Distribution{MatrixVariate, Dirichlet}, x) = sum(sum((dist.params[:a].-1).*log.(x .+ tiny),dims=1) - sum(loggamma.(dist.params[:a]), dims=1) + loggamma.(sum(dist.params[:a],dims=1)))
 
-    F_round = round.(F, digits=2)
-    if highlight !== nothing
-        extremum = highlight(F_round)
-    else
-        extremum = NaN
-    end
+# Custom update that outputs a Function message as result o6f Dirichlet-Function message product (instead of SampleList)
+ruleSPEqualityFnFactor(msg_1::Message{<:Function}, msg_2::Message{<:Dirichlet}, msg_3::Nothing) = Message(prodDirFn!(msg_1.dist, msg_2.dist))
+ruleSPEqualityFnFactor(msg_1::Message{<:Function}, msg_2::Nothing, msg_3::Message{<:Dirichlet}) = Message(prodDirFn!(msg_1.dist, msg_3.dist))
+ruleSPEqualityFnFactor(msg_1::Nothing, msg_2::Message{<:Function}, msg_3::Message{<:Dirichlet}) = Message(prodDirFn!(msg_2.dist, msg_3.dist))
+ruleSPEqualityFnFactor(msg_1::Message{<:Dirichlet}, msg_2::Message{<:Function}, msg_3::Nothing) = Message(prodDirFn!(msg_2.dist, msg_1.dist))
+ruleSPEqualityFnFactor(msg_1::Message{<:Dirichlet}, msg_2::Nothing, msg_3::Message{<:Function}) = Message(prodDirFn!(msg_3.dist, msg_1.dist))
+ruleSPEqualityFnFactor(msg_1::Nothing, msg_2::Message{<:Dirichlet}, msg_3::Message{<:Function}) = Message(prodDirFn!(msg_3.dist, msg_2.dist))
 
-    for i=1:4
-        for j=1:4
-            # Annotate number
-            if F[i,j] >= clim[2]-0.3
-                colour = :black
-            else
-                colour = :white
-            end
+prodDirFn!(dist_fn::Distribution{MatrixVariate, Function}, dist_dir::Distribution{MatrixVariate, Dirichlet}) =
+    Distribution(MatrixVariate, Function, log_pdf=(A)->logPdf(dist_dir, A)+dist_fn.params[:log_pdf](A))
 
-            if extremum == F_round[i,j]
-                ann = (j, i, text("$(F_round[i,j])*", 15, :red, :center)) # Annotate extremum
-            else
-                ann = (j, i, text(F_round[i,j], 15, colour, :center))
-            end
-            annotate!(ann, linecolor=colour)
-        end
-    end
+# Edit number of default samples
+function sampleWeightsAndEntropy(x::Distribution, y::Distribution)
+    n_samples = 10 # Number of samples is fixed
+    samples = sample(x, n_samples)
 
-    return p
+    # Apply log-pdf functions to the samples
+    log_samples_x = logPdf.([x], samples)
+    log_samples_y = logPdf.([y], samples)
+
+    # Extract the sample weights
+    w_raw = exp.(log_samples_y) # Unnormalized weights
+    w_sum = sum(w_raw)
+    weights = w_raw./w_sum # Normalize the raw weights
+
+    # Compute the separate contributions to the entropy
+    H_y = log(w_sum) - log(n_samples)
+    H_x = -sum( weights.*(log_samples_x + log_samples_y) )
+    entropy = H_x + H_y
+
+    # Inform next step about the proposal and integrand to be used in entropy calculation in smoothing
+    logproposal = (samples) -> logPdf.([x], samples)
+    logintegrand = (samples) -> logPdf.([y], samples)
+
+    return (samples, weights, w_raw, logproposal, logintegrand, entropy)
 end
 
-function plotReward(alphas, cs, R; dpi=100, clim=(0.0,1.0), title="")
-    R_mean = mean.(R)
+# Helper function to prevent log of 0
+safelog(x) = log(clamp(x,tiny,Inf))
 
-    p = plot(cs,
-             alphas, 
-             R_mean,
-             st=:contour,
-             fill=true,
-             dpi=dpi,
-             xlabel="c",
-             ylabel=L"\alpha",
-             title=title,
-             clim=clim,
-             xtickfontsize=12,
-             ytickfontsize=12,
-             xguidefontsize=14,
-             yguidefontsize=14,
-             size=(500,450))
-
-    return p
-end
-
-function annotateActions(p, alphas, cs, P; dpi=100, title="")
-    P_unique = unique.(P)
-    
-    J = length(alphas)
-    K = length(cs)
-
-    for j=1:J
-        for k=1:K
-            ann = (cs[k], alphas[j], text(join(P_unique[j,k], "\n"), 5, :red, :center)) # Annotate policies
-            annotate!(ann, linecolor=:red)
-        end
+function sample(dist::Distribution{MatrixVariate, Dirichlet})
+    A = similar(dist.params[:a])
+    for i = 1:size(A)[2]
+        A[:,i] = sample(Distribution(Multivariate, Dirichlet, a=dist.params[:a][:,i]))
     end
-
-    return p
+    return A
 end
+
+function unsafeMean(dist::Distribution{MatrixVariate, SampleList})
+    sum = zeros(size(dist.params[:s][1]))
+    for i=1:length(dist.params[:s])
+        sum = sum .+ dist.params[:s][i].*dist.params[:w][i]
+    end
+    return sum
+end
+
+function unsafeLogMean(dist::Distribution{MatrixVariate, SampleList})
+    sum = zeros(size(dist.params[:s][1]))
+    for i=1:length(dist.params[:s])
+        sum = sum .+ log.(dist.params[:s][i] .+ tiny).*dist.params[:w][i]
+    end
+    return sum
+end
+
+import ForneyLab: softmax, tiny
+
+function softmax(v::Vector)
+    r = v .- maximum(v)
+    clamp!(r, -100.0, 0.0)
+    exp.(r)./sum(exp.(r))
+end
+
+# Symmetry breaking for initial statistics
+function asym(n::Int64)
+    p = ones(n) .+ 1e-3*rand(n)
+    return p./sum(p)
+end
+
+asym(A::Matrix) = A + 1e-2*rand(size(A)...)

@@ -12,16 +12,18 @@ function asym(n::Int64)
     return p./sum(p)
 end
 
-asym(A::Matrix) = A + 0.05*rand(size(A)...)
+asym(A::Matrix) = A + 1e-2*rand(size(A)...)
 
 function constructAPrior()
+    eps = 0.1
+
     A_0_4 = [1.0 0.0;
              0.0 1.0;
              0.0 0.0;
              0.0 0.0]
 
-    A_0 = 0.1*ones(16, 8)
-    A_0[13:16, 7:8] = A_0_4 .+ 0.1 # Hint that position 4 resolves information
+    A_0 = eps*ones(16, 8)
+    A_0[13:16, 7:8] = A_0_4 .+ eps # Hint that position 4 resolves information
 
     return A_0
 end
