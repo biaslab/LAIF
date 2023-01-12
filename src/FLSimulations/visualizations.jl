@@ -1,4 +1,5 @@
 using LaTeXStrings
+using SparseArrays
 
 function plotFreeEnergies(Gt::Vector, at::Vector, ot::Vector, r::Int64)
     gtsvec = skipmissing([vec(Gts[s][1]); Gts[s][2]])
@@ -20,7 +21,7 @@ function plotG1(F::Matrix, at::Vector, ot::Vector, r::Int64;
             colorbar=false,
             xlim=(0.5,4.5), 
             ylim=(0.5,4.5), 
-            ylabel=L"\mathrm{First\,Policy\,} (\pi_1)",
+            # ylabel=L"\mathrm{First\,Policy\,} (\pi_1)",
             title=title,
             clim=clim,
             xticks=false,
@@ -85,7 +86,7 @@ function plotG2(F::Vector; dpi=100, clim=(4.0,8.0), title="", highlight=minimum)
             colorbar=false,
             xlim=(0.5,4.5), 
             ylim=(0.5,1.5), 
-            xlabel=L"\mathrm{Second\,Policy\,} (\pi_2)",
+            # xlabel=L"\mathrm{Second\,Policy\,} (\pi_2)",
             title=title,
             clim=clim,
             yticks=false,
@@ -120,4 +121,28 @@ function plotG2(F::Vector; dpi=100, clim=(4.0,8.0), title="", highlight=minimum)
     end
 
     return p
+end
+
+function plotFreeEnergyMinimum(Gts)
+    S = length(Gts)
+    
+    # Plot free energies over simulations
+    G1_mins = [minimum(skipmissing(Gts[s][1])) for s=1:S]
+    G2_mins = [minimum(skipmissing(Gts[s][2])) for s=1:S]
+    G3s = [Gts[s][3] for s=1:S]
+
+    plot(1:S, G1_mins, xlabel="Simulation (s)", ylabel="Free Energy Minimum [bits]", label="t=1", lw=2)
+    plot!(1:S, G2_mins, label="t=2", lw=2)
+    plot!(1:S, G3s, label="t=3", lw=2)
+end
+
+function plotObservationStatistics(As, A_0)
+    # Inspect difference in observation statistics
+    dA = sparse(round.(As[end] - A_0, digits=1)) 
+    dA_1 = dA[1:4, 1:2]
+    dA_2 = dA[5:8, 3:4]
+    dA_3 = dA[9:12, 5:6]
+    dA_4 = dA[13:16, 7:8]
+
+    return [dA_1 dA_2 dA_3 dA_4]
 end

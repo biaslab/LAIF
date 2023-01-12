@@ -33,11 +33,9 @@ function initializeAgent(A_0, B, C, D)
                     :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
                     :A => ProbabilityDistribution(MatrixVariate, Dirichlet, a=asym(A_s)))
                 
-                messages = initt1X()
-                                        
                 Gks = zeros(n_its)
                 for k=1:n_its
-                    stept1X!(data, marginals, messages)
+                    stept1X!(data, marginals)
                     stept1A!(data, marginals)
                     Gks[k] = freeEnergyt1(data, marginals)/log(2) # Convert to bits
                 end
@@ -67,11 +65,9 @@ function initializeAgent(A_0, B, C, D)
                     :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
                     :A => ProbabilityDistribution(MatrixVariate, Dirichlet, a=asym(A_s)))
                 
-                messages = initt2X()
-                                        
                 Gs = zeros(n_its)
                 for k=1:n_its
-                    stept2X!(data, marginals, messages)
+                    stept2X!(data, marginals)
                     stept2A!(data, marginals)
                     Gs[k] = freeEnergyt2(data, marginals)/log(2) # Convert to bits
                     Gs[k] += averageEnergy(Categorical, 
