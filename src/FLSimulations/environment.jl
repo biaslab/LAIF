@@ -71,7 +71,8 @@ function initializeWorld(A, B, C, D)
        x_0[1:2] = r
        x_t_min = x_0
        o_t = A*x_0
-       r_t = 0.0
+
+       return Int64(r'*[2, 3]) # Hidden reward position
     end
 
     # Set reward position
@@ -86,14 +87,12 @@ function initializeWorld(A, B, C, D)
     function execute(a_t::Int64)
         x_t = B[a_t]*x_t_min # State transition
         o_t = A*x_t # Observation
-        r_t = o_t'*kron(ones(4), [0.0, 0.0, 1.0, 0.0]) # Probability of reward
 
         x_t_min = x_t # Reset state for next step
     end
 
     o_t = A*x_0
-    r_t = 0.0
-    observe() = (o_t, r_t)
+    observe() = o_t
 
     return (reset, execute, observe)
 end
