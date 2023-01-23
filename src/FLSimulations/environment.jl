@@ -92,7 +92,13 @@ function initializeWorld(A, B, C, D)
     end
 
     o_t = A*x_0
-    observe() = o_t
+    function observe()
+        # if o_t[1:2] == [0.5, 0.5] # In position one
+        #     return o_t
+        # end
+
+        sample(Distribution(Univariate, Categorical, p=o_t))
+    end
 
     return (reset, execute, observe)
 end

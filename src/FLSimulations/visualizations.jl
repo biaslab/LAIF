@@ -2,12 +2,12 @@ using LaTeXStrings
 using SparseArrays
 
 function plotFreeEnergies(Gt::Vector, at::Vector, ot::Vector, r::Int64)
-    gtsvec = skipmissing([vec(Gts[s][1]); Gts[s][2]])
-    min = floor(minimum(gtsvec))
-    max = ceil(maximum(gtsvec))
+    gtvec = skipmissing([vec(Gt[1]); vec(Gt[2])])
+    min = floor(minimum(gtvec))
+    max = ceil(maximum(gtvec))
 
-    p1 = plotG1(Gts[s][1], at, ot, r, clim=(min,max+1))
-    p2 = plotG2(Gts[s][2], clim=(min,max+1))
+    p1 = plotG1(Gt[1], at, ot, r, clim=(min,max+1))
+    p2 = plotG2(Gt[2], at, clim=(min,max+1))
 
     plot(p1, p2, layout=grid(2,1,heights=[0.8,0.2]), size=(300, 400))
 end
@@ -57,10 +57,11 @@ function plotG1(F::Matrix, at::Vector, ot::Vector, r::Int64;
         end
     end
 
-    correct = (at .== r) # Correctly visited
-    correct_dict = Dict{Bool, String}(true  => "●",
+    mask = kron(ones(4), [0.0, 0.0, 1.0, 0.0])
+    rewarded = (dot.([mask], ot).== 1.0) # Obtained reward
+    rewarded_dict = Dict{Bool, String}(true  => "●",
                                       false => "○")
-    txt = join([correct_dict[c_t] for c_t in correct], " ")
+    txt = join([rewarded_dict[r_t] for r_t in rewarded], " ")
     ann = (3, 2.5, text(txt, 18, :gold, :center))
     annotate!(ann, linecolor=:gold)
 
@@ -77,8 +78,8 @@ function plotG1(F::Matrix, at::Vector, ot::Vector, r::Int64;
     return p
 end
 
-function plotG2(F::Vector; dpi=100, clim=(4.0,8.0), title="", highlight=minimum)
-    F = reshape(F,1,4)
+function plotG2(F::Matrix, at::Vector; dpi=100, clim=(4.0,8.0), title="", highlight=minimum)
+    F = reshape(F[at[1], :], 1, 4)
     p = heatmap(F,
             dpi=dpi,
             color=:grays, 
@@ -129,16 +130,29 @@ function plotFreeEnergyMinimum(Gts)
     # Plot free energies over simulations
     G1_mins = [minimum(skipmissing(Gts[s][1])) for s=1:S]
     G2_mins = [minimum(skipmissing(Gts[s][2])) for s=1:S]
-    G3s = [Gts[s][3] for s=1:S]
+    G3s = [minimum(skipmissing(Gts[s][3])) for s=1:S]
 
     plot(1:S, G1_mins, xlabel="Simulation (s)", ylabel="Free Energy Minimum [bits]", label="t=1", lw=2)
     plot!(1:S, G2_mins, label="t=2", lw=2)
     plot!(1:S, G3s, label="t=3", lw=2)
 end
 
-function plotObservationStatistics(As, A_0)
+function plotDecomposition(polts, riskts, ambts, novts)
+    S = length(polts)
+    
+    # Extract risks for t=1
+    risks = [riskts[s][1][polts[s][1]] for s=1:S]
+    ambs = [ambts[s][1][polts[s][1]] for s=1:S]
+    novs = [novts[s][1][polts[s][1]] for s=1:S]
+
+    plot(1:S, risks, xlabel="Simulation (s)", ylabel="Value [bits]", label="Risk", lw=2, title="Value decomposition for best policy at t=1") #, yaxis=:log)
+    plot!(1:S, ambs, label="Ambiguity", lw=2)
+    plot!(1:S, novs, label="Novelty", lw=2)
+end
+
+function plotObservationStatistics(A, A_0)
     # Inspect difference in observation statistics
-    dA = sparse(round.(As[end] - A_0, digits=1)) 
+    dA = sparse(round.(A - A_0, digits=1)) 
     dA_1 = dA[1:4, 1:2]
     dA_2 = dA[5:8, 3:4]
     dA_3 = dA[9:12, 5:6]
