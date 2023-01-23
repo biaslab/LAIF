@@ -23,8 +23,10 @@ end
 
 
 include("transition_mixture.jl");
+include("function.jl");
 include("GFECategorical.jl");
 include("helpers.jl");
+
 
 T = 2;
 
@@ -68,13 +70,9 @@ result = inference(model = t_maze(A,D,B[1],B[2],B[3],B[4],T),
                    data= (x = C,),
                    initmarginals = initmarginals,
                    initmessages = initmessages,
-#                   constraints=pointmass_q(),
+                   returnvars = KeepLast(),
+                   constraints=pointmass_q(),
                    iterations=10)
 
-# BEHOLD!!!!
-result.posteriors[:switch][end][1]
-result.posteriors[:switch][end][2]
-mean(result.posteriors[:A][end])
-
-
-
+mean(result.posteriors[:A])
+probvec.(result.posteriors[:switch])
