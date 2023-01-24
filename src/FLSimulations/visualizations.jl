@@ -2,12 +2,13 @@ using LaTeXStrings
 using SparseArrays
 
 function plotFreeEnergies(Gt::Vector, at::Vector, ot::Vector, r::Int64)
-    gtvec = skipmissing([vec(Gt[1]); vec(Gt[2])])
-    min = floor(minimum(gtvec))
-    max = ceil(maximum(gtvec))
+    min1 = floor(minimum(skipmissing(Gt[1])))
+    max1 = ceil(maximum(skipmissing(Gt[1])))
+    min2 = floor(minimum(skipmissing(Gt[2])))
+    max2 = ceil(maximum(skipmissing(Gt[2])))
 
-    p1 = plotG1(Gt[1], at, ot, r, clim=(min,max+1))
-    p2 = plotG2(Gt[2], at, clim=(min,max+1))
+    p1 = plotG1(Gt[1], at, ot, r, clim=(min1,max1+0.5))
+    p2 = plotG2(Gt[2], at, clim=(min2,max2+0.5))
 
     plot(p1, p2, layout=grid(2,1,heights=[0.8,0.2]), size=(300, 400))
 end
@@ -90,7 +91,7 @@ function plotG2(F::Matrix, at::Vector; dpi=100, clim=(4.0,8.0), title="", highli
             # xlabel=L"\mathrm{Second\,Policy\,} (\pi_2)",
             title=title,
             clim=clim,
-            yticks=false,
+            yticks=([1.0], [at[1]]),
             xtickfontsize=12,
             ytickfontsize=12,
             xguidefontsize=14,
@@ -150,7 +151,7 @@ function plotDecomposition(polts, riskts, ambts, novts)
     plot!(1:S, novs, label="Novelty", lw=2)
 end
 
-function plotObservationStatistics(A, A_0)
+function plotObservationStatistics(A::Matrix, A_0::Matrix)
     # Inspect difference in observation statistics
     dA = sparse(round.(A - A_0, digits=1)) 
     dA_1 = dA[1:4, 1:2]

@@ -81,5 +81,6 @@ function asym(n::Int64)
 end
 
 asym(A::Matrix) = A + 1e-2*rand(size(A)...)
+asym(D::Vector) = D + 1e-2*rand(length(D))
 
 dirMean(A::Matrix) = A./sum(A, dims=1)

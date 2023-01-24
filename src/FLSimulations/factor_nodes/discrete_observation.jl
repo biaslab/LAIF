@@ -71,7 +71,7 @@ function averageEnergy(::Type{DiscreteObservation{Generalized}},
     A = unsafeMean(marg_A)
     log_c = unsafeLogMean(marg_c)
 
-    -s'*diag(A'*safelog.(A)) - (A*s)'*log_c # Entropy term is included by algorithm itself
+    -s'*diag(A'*safelog.(A)) - (A*s)'*log_c # + (A*s)'*safelog.(A*s) # Entropy term is included by algorithm itself
 end
 
 function averageEnergy(::Type{DiscreteObservation{Generalized}},

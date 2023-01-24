@@ -1,215 +1,109 @@
-import ForneyLab: softmax, tiny
+function constructPriors()
+    eps = 0.1
+    
+    # Prior information: there might be information
+    # or goals at positions other than position one
+    A_0_2 = [1.0  eps;
+             eps  1.0;
+             1.0  1.0;
+             eps  eps]
 
-function softmax(v::Vector)
-    r = v .- maximum(v)
-    clamp!(r, -100.0, 0.0)
-    exp.(r)./sum(exp.(r))
+    A_0_3 = [1.0  eps;
+             eps  1.0;
+             1.0  1.0;
+             eps  eps]
+
+    A_0_4 = [1.0  eps;
+             eps  1.0;
+             1.0  1.0;
+             eps  eps]
+
+    A_0 = eps*ones(16, 8)
+
+    A_0[5:8, 3:4]   = A_0_2
+    A_0[9:12, 5:6]  = A_0_3
+    A_0[13:16, 7:8] = A_0_4
+
+    D_0 = zeros(8)
+    D_0[1:2] = [0.5, 0.5]
+
+    return (A_0, D_0)
 end
 
-# Symmetry breaking for initial statistics
-function asym(n::Int64)
-    p = ones(n) .+ 1e-3*rand(n)
-    return p./sum(p)
-end
-
-function evaluatePoliciesGBFE(A, B, C_t, D; n_its=10)
-    # Evaluate all policies
-    G = zeros(4,4)
-    for i in 1:4  # First move
-        for j = 1:4  # Second move
-            data = Dict(:u       => [B[i], B[j]],
-                        :A       => A,
-                        :C       => C_t,
-                        :D_t_min => D)
-
-            marginals = Dict{Symbol, ProbabilityDistribution}(
-                :x_t_min => ProbabilityDistribution(Univariate, Categorical, p=D),
-                :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
-                :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)))
-        
-            messages = init()
-
-            for k=1:n_its
-                step!(data, marginals, messages)
+function initializeAgent(A_0, B, C, D_0)
+    n_its = 50 # Iterations of variational algorithm
+    A_s = deepcopy(A_0)
+    D_s = deepcopy(D_0)
+    function infer(t::Int64, a::Vector, o::Vector)
+        # Define possible policies
+        G = Matrix{Union{Float64, Missing}}(undef, 4, 4)
+        if t == 1
+            pols = [(1,1), (1,2), (1,3), (1,4), (2,1), (3,1), (4,1), (4,2), (4,3), (4,4)]
+        elseif t == 2
+            a1 = a[1] # Register first move
+            if a1 in [2, 3]
+                pols = [(a1,1)] # Mandatory move to 1
+            else
+                pols = [(a1,1), (a1,2), (a1,3), (a1,4)]
             end
-        
-            G[i, j] = freeEnergy(data, marginals)
+        elseif t == 3
+            a1 = a[1] # Register both moves
+            a2 = a[2]
+            pols = [(a1, a2)]
         end
-    end
 
-    return G./log(2) # Convert to bits
-end
-
-# Evaluation includes parameter estimate
-function evaluatePoliciesFullGBFE(A, B, C, D; n_its=10)
-    # Evaluate all policies
-    G = zeros(4,4)
-    for i in 1:4  # First move
-        for j = 1:4  # Second move
-            data = Dict(:u       => [B[i], B[j]],
-                        :A       => A,
-                        :C       => [C, C],
-                        :D_t_min => D)
+        for (i, j) in pols
+            data = Dict(:u   => [B[i], B[j]],
+                        :A_s => A_s,
+                        :C   => C,
+                        :D_s => D_s)
 
             marginals = Dict{Symbol, ProbabilityDistribution}(
-                :x_t_min => ProbabilityDistribution(Univariate, Categorical, p=D),
+                :x_0 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
                 :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
                 :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
-                :A_t => ProbabilityDistribution(MatrixVariate, Dirichlet, a=A_0),
-                :c_t => ProbabilityDistribution(Multivariate, Dirichlet, a=C_0))
+                :A => ProbabilityDistribution(MatrixVariate, Dirichlet, a=asym(A_s)))
             
-            messages = initX()
-            
-            Gs = zeros(n_its)
-            for k=1:n_its
-                stepX!(data, marginals, messages)
-                stepC!(data, marginals, messages)
-                stepA!(data, marginals, messages)
-
-                Gs[k] = freeEnergy(data, marginals)
-            end
-                                
-            G[i, j] = mean(Gs[5:n_its])
-        end
-    end
-
-    return G./log(2) # Convert to bits
-end
-
-function evaluatePoliciesEFE(A, B, C_t, D)
-    # Construct priors
-    D_t_min = D
-    
-    # Evaluate all policies
-    Q = zeros(4,4)
-    for i in 1:4 # First move
-        x_t_hat = B[i]*D_t_min # Expected state
-        y_t_hat = A*x_t_hat # Expected outcome
-
-        # We follow Eq. D.2 in da Costa (2021) "Active inference on discrete state-spaces: a synthesis"
-        predicted_uncertainty_t = diag(A' * log.(A .+ tiny))' * x_t_hat # Friston (for reference): ones(16)' * (A.*log.(A .+ tiny)) * x_t_hat
-        predicted_divergence_t = transpose( log.(y_t_hat .+ tiny) - log.(C_t[1] .+ tiny) ) * y_t_hat
-        Q_t = predicted_uncertainty_t - predicted_divergence_t
-
-        for j in 1:4 # Second move
-            x_t_plus_hat = B[j]*x_t_hat # Expected state
-            y_t_plus_hat = A*x_t_plus_hat # Expected outcome
-
-            predicted_uncertainty_t_plus = diag(A' * log.(A .+ tiny))' * x_t_plus_hat
-            predicted_divergence_t_plus = transpose( log.(y_t_plus_hat .+ tiny) - log.(C_t[2] .+ tiny) ) * y_t_plus_hat
-            Q_t_plus = predicted_uncertainty_t_plus - predicted_divergence_t_plus
-
-            Q[i, j] = Q_t + Q_t_plus
-        end
-    end
-
-    return -Q./log(2) # Return expected free energy per policy in bits
-end
-
-function evaluatePoliciesGMFE(A, B, C_t, D; n_its=10)
-    # Evaluate all policies
-    G = zeros(4,4)
-    for i in 1:4  # First move
-        for j = 1:4  # Second move
-            data = Dict(:u       => [B[i], B[j]],
-                        :A       => A,
-                        :C       => C_t,
-                        :D_t_min => D)
-
-            marginals = Dict{Symbol, ProbabilityDistribution}(
-                :x_t_min => ProbabilityDistribution(Univariate, Categorical, p=D),
-                :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
-                :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)))
-        
-            for k=1:n_its
-                stepX0!(data, marginals)
-                stepX1!(data, marginals)
-                stepX2!(data, marginals)
-            end
-        
-            G[i, j] = freeEnergy(data, marginals)
-        end
-    end
-
-    return G./log(2) # Convert to bits
-end
-
-function evaluatePoliciesBFE(A, B, C_t, D)
-    # Evaluate all policies
-    F = zeros(4,4)
-    for i in 1:4  # First move
-        for j = 1:4  # Second move
-            data = Dict(:u       => [B[i], B[j]],
-                        :A       => A,
-                        :C       => C_t,
-                        :D_t_min => D)
-
-            marginals = step!(data)
-
-            F[i, j] = freeEnergy(data, marginals)
-        end
-    end
-
-    return F./log(2) # Convert to bits
-end
-
-function initializeAgent(A, B, C, D)
-    n_its = 10
-    function plan()
-        # Evaluate all policies
-        G = zeros(4,4)
-        for i in 1:4  # First move
-            for j = 1:4  # Second move
-                data = Dict(:u       => [B[i], B[j]],
-                            :A       => A,
-                            :C       => C_t,
-                            :D_t_min => D_t_min)
-
-                marginals = Dict{Symbol, ProbabilityDistribution}(
-                    :x_t_min => ProbabilityDistribution(Univariate, Categorical, p=D),
-                    :x_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
-                    :x_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)))
-                
-                messages = initPlan()
-                                        
-                Gs = zeros(n_its)
-                for k=1:n_its
-                    stepPlan!(data, marginals, messages)
-                    Gs[k] = freeEnergyPlan(data, marginals)
+            # Define (un)observed marginals
+            for k=1:2
+                if isassigned(o, k)
+                    # Observed
+                    marginals[:y_*k] = Distribution(Multivariate, PointMass, m=o[k])
+                else
+                    # Unobserved
+                    marginals[:y_*k] = Distribution(Univariate, Categorical, p=asym(16))
                 end
-                Gs = Gs./log(2) # Convert to bits                
+            end
 
-                G[i, j] = mean(Gs[5:n_its]) # Average to smooth fluctuations
+            messages = initX()
+                                    
+            Gis = zeros(n_its)
+            for i=1:n_its
+                stepX!(data, marginals, messages)
+                stepA!(data, marginals)
+                stepY!(data, marginals)
+                Gis[i] = freeEnergy(data, marginals)
+            end
+
+            G[i, j] = mean(Gis[10:n_its])./log(2) # Average to smooth fluctuations and convert to bits
+            if t == 3 # Update posterior statistics after learning
+                A_s = deepcopy(marginals[:A].params[:a])
             end
         end
 
-        return G./log(2) # Return free energy in bits
+        return (G, A_s)
     end
 
-    function act(G::Matrix{Float64})
+    function act(t, G)
         # We include policy selection in the act function for clearer code; procedurally, policy selection belongs in the plan step
-        p = softmax(vec(-100*G)) # Determine policy probabilities with high precision (max selection)
-        S = reshape(sample(ProbabilityDistribution(Categorical, p=p)), 4, 4) # Reshaped policy sample
-        (_, pol) = findmax(S)
-
-        return pol[1] # Return first action of policy
-    end
-
-    D_t_min = D
-    C_t = [C, C]
-    function slide(a_t::Int64, o_t::Vector{Float64})
-        # Estimate state
-        data = Dict(:B_t     => B[a_t],
-                    :A       => A,
-                    :o_t     => o_t,
-                    :D_t_min => D_t_min)
-        marginals = stepSlide!(data)
-        D_t_min = ForneyLab.unsafeMean(marginals[:x_t]) # Reset prior state statistics
+        idx = findall((!).(ismissing.(G))) # Find coordinates of non-missing entries
+        Gvec = G[idx] # Convert to vector of valid entries
+        p = softmax(-100.0*Gvec)
+        s = sample(ProbabilityDistribution(Categorical, p=p)) # Sample a 1-of-K representation
+        c = first(idx[s.==1.0]) # Select coordinate (policy) by sample
         
-        # Shift goals for next move
-        C_t = circshift(C_t, -1)
-        C_t[end] = C
+        return c[t] # Return current action
     end
 
-    return (plan, act, slide)
+    return (infer, act)
 end
