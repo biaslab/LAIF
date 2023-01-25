@@ -1,29 +1,17 @@
 function constructPriors()
     eps = 0.1
     
-    # Prior information: there might be information
-    # or goals at positions other than position one
-    A_0_2 = [1.0  eps;
-             eps  1.0;
-             1.0  1.0;
+    # Strong prior on position 1
+    A_0_1 = [10.0 10.0;
+             10.0 10.0;
+             eps  eps;
              eps  eps]
 
-    A_0_3 = [1.0  eps;
-             eps  1.0;
-             1.0  1.0;
-             eps  eps]
+    A_0 = eps*ones(16, 8) # Vague prior on everything else
 
-    A_0_4 = [1.0  eps;
-             eps  1.0;
-             1.0  1.0;
-             eps  eps]
+    A_0[1:4, 1:2] = A_0_1
 
-    A_0 = eps*ones(16, 8)
-
-    A_0[5:8, 3:4]   = A_0_2
-    A_0[9:12, 5:6]  = A_0_3
-    A_0[13:16, 7:8] = A_0_4
-
+    # Agent knows it starts at position 1
     D_0 = zeros(8)
     D_0[1:2] = [0.5, 0.5]
 

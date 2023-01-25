@@ -1,3 +1,5 @@
+using Random
+
 function constructABCD(α::Float64, c::Float64)
     # Observation model
     A_1 = [0.5 0.5;
@@ -60,15 +62,24 @@ function constructABCD(α::Float64, c::Float64)
     return (A, B, C, D)
 end
 
-function initializeWorld(A, B, C, D)
-    function reset()
-       if rand() > 0.5
-           r = [0, 1]
-       else
-           r = [1, 0]
-       end
+function generateGoalSequence(seed::Int64, S::Int64)
+    Random.seed!(seed)
+    rs = Vector{Vector}(undef, S)
+    for s=1:S
+        if rand() > 0.5
+            rs[s] = [0, 1]
+        else
+            rs[s] = [1, 0]
+        end
+    end
+
+    return rs
+end
+
+function initializeWorld(A, B, C, D, rs)
+    function reset(s)
        x_0 = zeros(8)
-       x_0[1:2] = r
+       x_0[1:2] = rs[s]
        x_t_min = x_0
        o_t = A*x_0
 
