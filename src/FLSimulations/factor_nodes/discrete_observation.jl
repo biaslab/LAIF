@@ -56,34 +56,48 @@ end
 slug(::Type{DiscreteObservation{T}}) where T<:ApproximationMethod = "DO{$(removePrefix(T))}"
 
 # A breaker message is required if interface is partnered with a DO node out interface
-requiresBreaker(interface::Interface, partner_interface::Interface, partner_node::DiscreteObservation) = (partner_interface == partner_node.interfaces[2])
+requiresBreaker(interface::Interface, partner_interface::Interface, partner_node::DiscreteObservation{Generalized}) = (partner_interface == partner_node.interfaces[2])
 
-breakerParameters(interface::Interface, partner_interface::Interface, partner_node::DiscreteObservation) = (Message{Categorical, Univariate}, (partner_node.n_factors,)) # Defaults to two factors
+breakerParameters(interface::Interface, partner_interface::Interface, partner_node::DiscreteObservation{Generalized}) = (Message{Categorical, Univariate}, (partner_node.n_factors,)) # Defaults to two factors
 
-# Average energy functional
+# Average energy functionals
 function averageEnergy(::Type{DiscreteObservation{Generalized}},
                        ::Distribution{Univariate, Categorical}, # Unconstrained observation (not used)
                        marg_s::Distribution{Univariate},
                        marg_A::Distribution{MatrixVariate},
-                       marg_c::Distribution{Multivariate})
+                       marg_c::Distribution)
 
     s = unsafeMean(marg_s)
     A = unsafeMean(marg_A)
     log_c = unsafeLogMean(marg_c)
 
-    -s'*diag(A'*safelog.(A)) - (A*s)'*log_c # + (A*s)'*safelog.(A*s) # Entropy term is included by algorithm itself
+    -s'*diag(A'*safelog.(A)) - (A*s)'*log_c # + (A*s)'*safelog.(A*s) # Entropy term is included by algorithm
 end
 
-function averageEnergy(::Type{DiscreteObservation{Generalized}},
+function averageEnergy(::Type{DiscreteObservation{Bethe}},
+                       marg_y::Distribution{Univariate, Categorical}, # Unconstrained observation
+                       marg_s::Distribution{Univariate},
+                       marg_A::Distribution{MatrixVariate},
+                       marg_c::Distribution)
+
+    y = unsafeMean(marg_y)
+    s = unsafeMean(marg_s)
+    log_A = unsafeLogMean(marg_A)
+    log_c = unsafeLogMean(marg_c)
+
+    -y'*(log_A*s + log_c) # + y'*log_y # Entropy term is included by algorithm
+end
+
+function averageEnergy(::Type{<:DiscreteObservation}, # Holds for Generalized and Bethe
                        marg_y::Distribution{Multivariate, PointMass}, # Constrained observation
                        marg_s::Distribution{Univariate},
                        marg_A::Distribution{MatrixVariate},
-                       marg_c::Distribution{Multivariate})
+                       marg_c::Distribution)
 
     y_hat = unsafeMean(marg_y)
     s = unsafeMean(marg_s)
     log_A = unsafeLogMean(marg_A)
     log_c = unsafeLogMean(marg_c)
 
-    -y_hat'*(log_A*s - log_c)
+    -y_hat'*(log_A*s + log_c)
 end
