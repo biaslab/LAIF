@@ -140,9 +140,9 @@ function plotFreeEnergyMinimum(Gs, os; args...)
     G3s = [minimum(skipmissing(Gs[s][3])) for s=1:S]
 
     empty_ticks = ([0,25,50,75,100],["","","","",""])
-    p1 = plot(1:S, G1_mins, xticks=empty_ticks, ylabel="Free Energy Minimum [bits]", label="t=1", lw=2; args...)
-    plot!(p1, 1:S, G2_mins, label="t=2", lw=2)
-    plot!(p1, 1:S, G3s, label="t=3", lw=2)
+    p1 = plot(1:S, G1_mins, xticks=empty_ticks, ylabel="Free Energy Minimum [bits]", label="t=0", lw=2; args...)
+    plot!(p1, 1:S, G2_mins, label="t=1", lw=2)
+    plot!(p1, 1:S, G3s, label="t=2", lw=2)
 
     rew_mask = kron(ones(Int64, 4), [0,0,1,0])
     rew = Vector{Float64}(undef, S)
