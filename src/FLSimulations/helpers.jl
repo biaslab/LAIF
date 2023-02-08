@@ -1,23 +1,29 @@
 using StatsFuns: gammainvcdf, loggamma
-import ForneyLab: ruleSPEqualityFnFactor, sample, logPdf, sampleWeightsAndEntropy, sample, unsafeMean, unsafeLogMean
+import ForneyLab: ruleSPEqualityDirichlet, sample, logPdf, sampleWeightsAndEntropy, sample, unsafeMean, unsafeLogMean, VariateType, differentialEntropy
+
+differentialEntropy(::Distribution{<:VariateType, PointMass}) = 0.0 # Define entropy of pointmass as zero
 
 # Edit: add tiny to x
 logPdf(dist::Distribution{MatrixVariate, Dirichlet}, x) = sum(sum((dist.params[:a].-1).*log.(x .+ tiny),dims=1) - sum(loggamma.(dist.params[:a]), dims=1) + loggamma.(sum(dist.params[:a],dims=1)))
 
-# Custom update that outputs a Function message as result o6f Dirichlet-Function message product (instead of SampleList)
-ruleSPEqualityFnFactor(msg_1::Message{<:Function}, msg_2::Message{<:Dirichlet}, msg_3::Nothing) = Message(prodDirFn!(msg_1.dist, msg_2.dist))
-ruleSPEqualityFnFactor(msg_1::Message{<:Function}, msg_2::Nothing, msg_3::Message{<:Dirichlet}) = Message(prodDirFn!(msg_1.dist, msg_3.dist))
-ruleSPEqualityFnFactor(msg_1::Nothing, msg_2::Message{<:Function}, msg_3::Message{<:Dirichlet}) = Message(prodDirFn!(msg_2.dist, msg_3.dist))
-ruleSPEqualityFnFactor(msg_1::Message{<:Dirichlet}, msg_2::Message{<:Function}, msg_3::Nothing) = Message(prodDirFn!(msg_2.dist, msg_1.dist))
-ruleSPEqualityFnFactor(msg_1::Message{<:Dirichlet}, msg_2::Nothing, msg_3::Message{<:Function}) = Message(prodDirFn!(msg_3.dist, msg_1.dist))
-ruleSPEqualityFnFactor(msg_1::Nothing, msg_2::Message{<:Dirichlet}, msg_3::Message{<:Function}) = Message(prodDirFn!(msg_3.dist, msg_2.dist))
+# Custom update that outputs a Function message as result of Dirichlet-Function message product
+ruleSPEqualityDirichlet(msg_1::Message{<:Function}, msg_2::Message{<:Dirichlet}, msg_3::Nothing) = Message(prodDirFn!(msg_1.dist, msg_2.dist))
+ruleSPEqualityDirichlet(msg_1::Message{<:Function}, msg_2::Nothing, msg_3::Message{<:Dirichlet}) = Message(prodDirFn!(msg_1.dist, msg_3.dist))
+ruleSPEqualityDirichlet(msg_1::Nothing, msg_2::Message{<:Function}, msg_3::Message{<:Dirichlet}) = Message(prodDirFn!(msg_2.dist, msg_3.dist))
+ruleSPEqualityDirichlet(msg_1::Message{<:Dirichlet}, msg_2::Message{<:Function}, msg_3::Nothing) = Message(prodDirFn!(msg_2.dist, msg_1.dist))
+ruleSPEqualityDirichlet(msg_1::Message{<:Dirichlet}, msg_2::Nothing, msg_3::Message{<:Function}) = Message(prodDirFn!(msg_3.dist, msg_1.dist))
+ruleSPEqualityDirichlet(msg_1::Nothing, msg_2::Message{<:Dirichlet}, msg_3::Message{<:Function}) = Message(prodDirFn!(msg_3.dist, msg_2.dist))
 
 prodDirFn!(dist_fn::Distribution{MatrixVariate, Function}, dist_dir::Distribution{MatrixVariate, Dirichlet}) =
     Distribution(MatrixVariate, Function, log_pdf=(A)->logPdf(dist_dir, A)+dist_fn.params[:log_pdf](A))
 
+ruleSPEqualityDirichlet(msg_1::Message{<:Function}, msg_2::Message{<:Function}, msg_3::Nothing) = Message(prod!(msg_1.dist, msg_2.dist))
+ruleSPEqualityDirichlet(msg_1::Message{<:Function}, msg_2::Nothing, msg_3::Message{<:Function}) = Message(prod!(msg_1.dist, msg_3.dist))
+ruleSPEqualityDirichlet(msg_1::Nothing, msg_2::Message{<:Function}, msg_3::Message{<:Function}) = Message(prod!(msg_2.dist, msg_3.dist))
+
 # Edit number of default samples
-function sampleWeightsAndEntropy(x::Distribution, y::Distribution)
-    n_samples = 10 # Number of samples is fixed
+function sampleWeightsAndEntropy(x::Distribution, y::Distribution{<:VariateType, <:Function})
+    n_samples = 10 # 100 # Number of samples is fixed
     samples = sample(x, n_samples)
 
     # Apply log-pdf functions to the samples
@@ -45,19 +51,11 @@ end
 safelog(x) = log(clamp(x,tiny,Inf))
 
 function sample(dist::Distribution{MatrixVariate, Dirichlet})
-    A = similar(dist.params[:a])
-    for i = 1:size(A)[2]
-        A[:,i] = sample(Distribution(Multivariate, Dirichlet, a=dist.params[:a][:,i]))
-    end
-    return A
-end
+    A = dist.params[:a]
+    U = rand(size(A)...)
+    S = gammainvcdf.(A, 1.0, U)
 
-function unsafeMean(dist::Distribution{MatrixVariate, SampleList})
-    sum = zeros(size(dist.params[:s][1]))
-    for i=1:length(dist.params[:s])
-        sum = sum .+ dist.params[:s][i].*dist.params[:w][i]
-    end
-    return sum
+    return S./sum(S, dims=1) # Normalize columns
 end
 
 function unsafeLogMean(dist::Distribution{MatrixVariate, SampleList})
@@ -83,5 +81,3 @@ function asym(n::Int64)
 end
 
 asym(A::Matrix) = A + 1e-2*rand(size(A)...)
-
-dirMean(A::Matrix) = A./sum(A, dims=1)
