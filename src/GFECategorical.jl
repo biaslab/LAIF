@@ -19,7 +19,7 @@ struct GFECategorical end
 end
 
 
-@rule GFECategorical(:in, Marginalisation) (m_out::{DiscreteNonParametric,PointMass}, q_out::{DiscreteNonParametric,PointMass},m_in::{DiscreteNonParametric,PointMass}, q_in::{DiscreteNonParametric,PointMass}, m_A::{MatrixDirichlet,PointMass}, q_A::{MatrixDirichlet,PointMass},) = begin
+@rule GFECategorical(:in, Marginalisation) (m_out::{DiscreteNonParametric,PointMass}, q_out::{DiscreteNonParametric,PointMass},m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::{MatrixDirichlet,PointMass}, q_A::{MatrixDirichlet,PointMass},) = begin
 
     z = probvec(q_in)
     d = probvec(m_in)
@@ -56,7 +56,7 @@ end
 end
 
 # Message towards C
-@rule GFECategorical(:out,Marginalisation) (m_out::{DiscreteNonParametric,PointMass}, q_out::{DiscreteNonParametric,PointMass}, m_in::{DiscreteNonParametric,PointMass}, q_in::{DiscreteNonParametric,PointMass}, m_A::MatrixDirichlet, q_A::MatrixDirichlet,) = begin
+@rule GFECategorical(:out,Marginalisation) (m_out::DiscreteNonParametric, q_out::DiscreteNonParametric, m_in::{DiscreteNonParametric,PointMass}, q_in::{DiscreteNonParametric,PointMass}, m_A::{MatrixDirichlet,PointMass}, q_A::{MatrixDirichlet,PointMass},) = begin
 
     A_bar = mean(q_A)
     s = probvec(m_in)
