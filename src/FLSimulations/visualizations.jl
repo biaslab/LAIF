@@ -10,14 +10,14 @@ function plotFreeEnergies(Gt::Vector, at::Vector, ot::Vector, r::Vector; title=t
     p1 = plotG1(Gt[1], at, ot, r, clim=(min1,max1+0.5), title=title)
     p2 = plotG2(Gt[2], at, clim=(min2,max2+0.5))
 
-    plot(p1, p2, layout=grid(2,1,heights=[0.8,0.2]), size=(300, 400))
+    plot(p1, p2, layout=grid(2,1,heights=[0.8,0.2]), size=(300, 400), dpi=300)
 end
 
 function plotG1(F::Matrix, at::Vector, ot::Vector, r::Vector; 
-                dpi=100, clim=(4.0,8.0), title="", highlight=minimum)
+                clim=(4.0,8.0), title="", highlight=minimum)
     ticks = ([1,2,3,4], ["O","L","R","C"])
     p = heatmap(F,
-            dpi=dpi,
+            dpi=300,
             color=:grays, 
             aspect_ratio=:equal,
             colorbar=false,
@@ -84,11 +84,11 @@ function plotG1(F::Matrix, at::Vector, ot::Vector, r::Vector;
     return p
 end
 
-function plotG2(F::Matrix, at::Vector; dpi=100, clim=(4.0,8.0), title="", highlight=minimum)
+function plotG2(F::Matrix, at::Vector; clim=(4.0,8.0), title="", highlight=minimum)
     ticks = ([1,2,3,4], ["O","L","R","C"])
     F = reshape(F[at[1], :], 1, 4)
     p = heatmap(F,
-            dpi=dpi,
+            dpi=300,
             color=:grays, 
             aspect_ratio=:equal,
             colorbar=false,
@@ -135,28 +135,28 @@ function plotFreeEnergyMinimum(Gs, os; args...)
     S = length(Gs)
     
     # Plot free energies over simulations
-    G1_mins = [minimum(skipmissing(Gs[s][1])) for s=1:S]
-    G2_mins = [minimum(skipmissing(Gs[s][2])) for s=1:S]
-    G3s = [minimum(skipmissing(Gs[s][3])) for s=1:S]
+    G1_mins = [minimum(skipmissing(Gs[si][1])) for si=1:S]
+    G2_mins = [minimum(skipmissing(Gs[si][2])) for si=1:S]
+    G3s = [minimum(skipmissing(Gs[si][3])) for si=1:S]
 
     empty_ticks = ([0,25,50,75,100],["","","","",""])
-    p1 = plot(1:S, G1_mins, xticks=empty_ticks, ylabel="Free Energy Minimum [bits]", label="t=0", lw=2; args...)
-    plot!(p1, 1:S, G2_mins, label="t=1", lw=2)
-    plot!(p1, 1:S, G3s, label="t=2", lw=2)
+    p1 = plot(0:S-1, G1_mins, xticks=empty_ticks, ylabel="Free Energy Minimum [bits]", label="t=0", lw=2, linestyle=:dashdot; args...)
+    plot!(p1, 0:S-1, G2_mins, label="t=1", lw=2, linestyle=:dash)
+    plot!(p1, 0:S-1, G3s, label="t=2", lw=2)
 
     rew_mask = kron(ones(Int64, 4), [0,0,1,0])
     rew = Vector{Float64}(undef, S)
-    for s=1:S
-        rew_1 = rew_mask'*os[s][1]
-        rew_2 = rew_mask'*os[s][2]
-        rew[s] = rew_1 + rew_2
+    for si=1:S
+        rew_1 = rew_mask'*os[si][1]
+        rew_2 = rew_mask'*os[si][2]
+        rew[si] = rew_1 + rew_2
     end
-    p2 = scatter(1:S, 1 .- rew, xlabel="Simulation (s)", yticks=([0, 1], ["RW", "NR"]), color=:black, legend=false, ylim=(-0.1, 1.1), markersize=2.5) # Plot non-reward
+    p2 = scatter(0:S-1, 1 .- rew, xlabel="Simulation Episode (s)", yticks=([0, 1], ["RW", "NR"]), color=:black, legend=false, ylim=(-0.1, 1.1), markersize=2.5) # Plot non-reward
     
-    plot(p1, p2, layout=grid(2,1,heights=[0.8,0.2]))
+    plot(p1, p2, layout=grid(2,1,heights=[0.8,0.2]), dpi=300)
 end
 
-function plotObservationStatistics(A::Matrix, A_0::Matrix)
+function plotObservationStatistics(A::Matrix, A_0::Matrix; title="")
     # Inspect difference in observation statistics
     # dA = sparse(round.(A - A_0, digits=1))
     dA = Matrix{Union{Missing,Float64}}(A - A_0)
@@ -172,10 +172,10 @@ function plotObservationStatistics(A::Matrix, A_0::Matrix)
     empty = ([1, 2, 3, 4], ["", "", "", ""])
     xticks = ([1, 2], ["RL", "RR"])
     cg = cgrad(:grays, rev = true)
-    p1 = heatmap(dA_1, title=L"A_O", yflip=true, c=cg, colorbar=false, clim=(0.0, cmax), color=:grays, xticks=xticks, yticks=yticks)
-    p2 = heatmap(dA_2, title=L"A_L", yflip=true, c=cg, colorbar=false, clim=(0.0, cmax), color=:grays, xticks=xticks, yticks=empty)
-    p3 = heatmap(dA_3, title=L"A_R", yflip=true, c=cg, colorbar=false, clim=(0.0, cmax), color=:grays, xticks=xticks, yticks=empty)
-    p4 = heatmap(dA_4, title=L"A_C", yflip=true, c=cg, clim=(0.0, cmax), xticks=xticks, yticks=empty)
+    p1 = heatmap(dA_1, title=L"O", yflip=true, c=cg, colorbar=false, clim=(0.0, cmax), color=:grays, xticks=xticks, yticks=yticks)
+    p2 = heatmap(dA_2, title=L"L", yflip=true, c=cg, colorbar=false, clim=(0.0, cmax), color=:grays, xticks=xticks, yticks=empty)
+    p3 = heatmap(dA_3, title=L"R", yflip=true, c=cg, colorbar=false, clim=(0.0, cmax), color=:grays, xticks=xticks, yticks=empty)
+    p4 = heatmap(dA_4, title=L"C", yflip=true, c=cg, clim=(0.0, cmax), xticks=xticks, yticks=empty)
 
-    plot(p1, p2, p3, p4, layout=grid(1,4,widths=[0.2,0.2,0.2,0.33]), size=(500,220))
+    plot(p1, p2, p3, p4, layout=grid(1,4,widths=[0.2,0.2,0.2,0.33]), size=(500,220), dpi=300, plot_title=title, plot_titlevspan=0.1)
 end
