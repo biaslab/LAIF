@@ -144,16 +144,22 @@ function plotFreeEnergyMinimum(Gs, os; args...)
     plot!(p1, 0:S-1, G2_mins, label="t=1", lw=2, linestyle=:dash)
     plot!(p1, 0:S-1, G3s, label="t=2", lw=2)
 
-    rew_mask = kron(ones(Int64, 4), [0,0,1,0])
-    rew = Vector{Float64}(undef, S)
-    for si=1:S
-        rew_1 = rew_mask'*os[si][1]
-        rew_2 = rew_mask'*os[si][2]
-        rew[si] = rew_1 + rew_2
-    end
-    p2 = scatter(0:S-1, 1 .- rew, xlabel="Simulation Episode (s)", yticks=([0, 1], ["RW", "NR"]), color=:black, legend=false, ylim=(-0.1, 1.1), markersize=2.5) # Plot non-reward
+    wins = extractWins(os)
+    p2 = scatter(0:S-1, 1 .- wins, xlabel="Simulation Trial (s)", yticks=([0, 1], ["win", "loss"]), color=:black, legend=false, ylim=(-0.1, 1.1), markersize=2.5) # Plot non-reward
     
     plot(p1, p2, layout=grid(2,1,heights=[0.8,0.2]), dpi=300)
+end
+
+function extractWins(os)
+    win_mask = kron(ones(Int64, 4), [0,0,1,0])
+    wins = Vector{Float64}(undef, S)
+    for si=1:S
+        win_1 = win_mask'*os[si][1]
+        win_2 = win_mask'*os[si][2]
+        wins[si] = win_1 + win_2
+    end
+
+    return wins
 end
 
 function plotObservationStatistics(A::Matrix, A_0::Matrix; title="")
@@ -172,10 +178,29 @@ function plotObservationStatistics(A::Matrix, A_0::Matrix; title="")
     empty = ([1, 2, 3, 4], ["", "", "", ""])
     xticks = ([1, 2], ["RL", "RR"])
     cg = cgrad(:grays, rev = true)
-    p1 = heatmap(dA_1, title=L"O", yflip=true, c=cg, colorbar=false, clim=(0.0, cmax), color=:grays, xticks=xticks, yticks=yticks)
-    p2 = heatmap(dA_2, title=L"L", yflip=true, c=cg, colorbar=false, clim=(0.0, cmax), color=:grays, xticks=xticks, yticks=empty)
-    p3 = heatmap(dA_3, title=L"R", yflip=true, c=cg, colorbar=false, clim=(0.0, cmax), color=:grays, xticks=xticks, yticks=empty)
-    p4 = heatmap(dA_4, title=L"C", yflip=true, c=cg, clim=(0.0, cmax), xticks=xticks, yticks=empty)
+    p1 = heatmap(dA_1, title=L"O", yflip=true, c=cg, colorbar=false, clim=(0, 55), color=:grays, xticks=xticks, yticks=yticks)
+    p2 = heatmap(dA_2, title=L"L", yflip=true, c=cg, colorbar=false, clim=(0, 55), color=:grays, xticks=xticks, yticks=empty)
+    p3 = heatmap(dA_3, title=L"R", yflip=true, c=cg, colorbar=false, clim=(0, 55), color=:grays, xticks=xticks, yticks=empty)
+    p4 = heatmap(dA_4, title=L"C", yflip=true, c=cg, colorbar=false, clim=(0, 55), xticks=xticks, yticks=empty)
 
-    plot(p1, p2, p3, p4, layout=grid(1,4,widths=[0.2,0.2,0.2,0.33]), size=(500,220), dpi=300, plot_title=title, plot_titlevspan=0.1)
+    for (px, dA_x) in [(p1,dA_1), (p2,dA_2), (p3,dA_3), (p4,dA_4)]
+        for i=1:4
+            for j=1:2
+                ismissing(dA_x[i,j]) && continue
+
+                # Annotate number
+                if dA_x[i,j] <= 30
+                    colour = :black
+                else
+                    colour = :white
+                end
+                
+                ann = (j, i, text(Int64(round(dA_x[i,j], digits=0)), 10, colour, :center))
+
+                annotate!(px, ann, linecolor=colour)
+            end
+        end
+    end
+
+    plot(p1, p2, p3, p4, layout=grid(1,4,widths=[0.25,0.25,0.25,0.25]), size=(500,220), dpi=300, plot_title=title, plot_titlevspan=0.1)
 end
