@@ -135,17 +135,17 @@ function plotFreeEnergyMinimum(Gs, os; args...)
     S = length(Gs)
     
     # Plot free energies over simulations
-    G1_mins = [minimum(skipmissing(Gs[si][1])) for si=1:S]
-    G2_mins = [minimum(skipmissing(Gs[si][2])) for si=1:S]
-    G3s = [minimum(skipmissing(Gs[si][3])) for si=1:S]
+    G1_mins = [minimum(skipmissing(Gs[s][1])) for s=1:S]
+    G2_mins = [minimum(skipmissing(Gs[s][2])) for s=1:S]
+    G3s = [minimum(skipmissing(Gs[s][3])) for s=1:S]
 
     empty_ticks = ([0,25,50,75,100],["","","","",""])
-    p1 = plot(0:S-1, G1_mins, xticks=empty_ticks, ylabel="Free Energy Minimum [bits]", label="t=0", lw=2, linestyle=:dashdot; args...)
-    plot!(p1, 0:S-1, G2_mins, label="t=1", lw=2, linestyle=:dash)
-    plot!(p1, 0:S-1, G3s, label="t=2", lw=2)
+    p1 = plot(1:S, G1_mins, xticks=empty_ticks, ylabel="Free Energy Minimum [bits]", label="t=1", lw=2, linestyle=:dashdot; args...)
+    plot!(p1, 1:S, G2_mins, label="t=2", lw=2, linestyle=:dash)
+    plot!(p1, 1:S, G3s, label="t=3", lw=2)
 
     wins = extractWins(os)
-    p2 = scatter(0:S-1, 1 .- wins, xlabel="Simulation Trial (s)", yticks=([0, 1], ["win", "loss"]), color=:black, legend=false, ylim=(-0.1, 1.1), markersize=2.5) # Plot non-reward
+    p2 = scatter(1:S, 1 .- wins, xlabel="Simulation Trial (s)", yticks=([0, 1], ["win", "loss"]), color=:black, legend=false, ylim=(-0.1, 1.1), markersize=2.5) # Plot non-reward
     
     plot(p1, p2, layout=grid(2,1,heights=[0.8,0.2]), dpi=300)
 end
@@ -153,10 +153,10 @@ end
 function extractWins(os)
     win_mask = kron(ones(Int64, 4), [0,0,1,0])
     wins = Vector{Float64}(undef, S)
-    for si=1:S
-        win_1 = win_mask'*os[si][1]
-        win_2 = win_mask'*os[si][2]
-        wins[si] = win_1 + win_2
+    for s=1:S
+        win_1 = win_mask'*os[s][1]
+        win_2 = win_mask'*os[s][2]
+        wins[s] = win_1 + win_2
     end
 
     return wins

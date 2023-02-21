@@ -25,16 +25,16 @@ function initializeAgent(A_0, B, C, D_0)
     function infer(t::Int64, a::Vector, o::Vector)
         # Define possible policies
         G = Matrix{Union{Float64, Missing}}(undef, 4, 4)
-        if t == 0
+        if t == 1
             pols = [(1,1), (1,2), (1,3), (1,4), (2,1), (3,1), (4,1), (4,2), (4,3), (4,4)]
-        elseif t == 1
+        elseif t == 2
             a1 = a[1] # Register first move
             if a1 in [2, 3]
                 pols = [(a1,1)] # Mandatory move to 1
             else
                 pols = [(a1,1), (a1,2), (a1,3), (a1,4)]
             end
-        elseif t == 2
+        elseif t == 3
             a1 = a[1] # Register both moves
             a2 = a[2]
             pols = [(a1, a2)]
@@ -74,7 +74,7 @@ function initializeAgent(A_0, B, C, D_0)
             end
 
             G[i, j] = mean(Gis[10:n_its])./log(2) # Average to smooth fluctuations and convert to bits
-            if t == 2 # Update posterior statistics after learning
+            if t == 3 # Update posterior statistics after learning
                 A_s = deepcopy(marginals[:A].params[:a])
             end
         end
@@ -90,7 +90,7 @@ function initializeAgent(A_0, B, C, D_0)
         s = sample(ProbabilityDistribution(Categorical, p=p)) # Sample a one-hot representation
         c = first(idx[s.==1.0]) # Select coordinate (policy) by sample
         
-        return c[t+1] # Return current action
+        return c[t] # Return current action
     end
 
     return (infer, act)
