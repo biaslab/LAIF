@@ -62,19 +62,24 @@ function constructABCD(α::Float64, c::Float64)
     return (A, B, C, D)
 end
 
-function generateGoalSequence(seed::Int64, S::Int64)
-    Random.seed!(seed)
+function generateGoalSequence(S::Int64)
     rs = Vector{Vector}(undef, S)
-    for s=1:S
+    for si=1:S
         if rand() > 0.5
-            rs[s] = [0, 1]
+            rs[si] = [0, 1]
         else
-            rs[s] = [1, 0]
+            rs[si] = [1, 0]
         end
     end
 
     return rs
 end
+
+function generateGoalSequence(seed::Int64, S::Int64)
+    Random.seed!(seed)
+    generateGoalSequence(S)
+end
+
 
 function initializeWorld(A, B, C, D, rs)
     function reset(s)

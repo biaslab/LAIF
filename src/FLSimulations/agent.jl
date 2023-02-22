@@ -87,7 +87,7 @@ function initializeAgent(A_0, B, C, D_0)
         idx = findall((!).(ismissing.(G))) # Find coordinates of non-missing entries
         Gvec = G[idx] # Convert to vector of valid entries
         p = softmax(-100.0*Gvec)
-        s = sample(ProbabilityDistribution(Categorical, p=p)) # Sample a 1-of-K representation
+        s = sample(ProbabilityDistribution(Categorical, p=p)) # Sample a one-hot representation
         c = first(idx[s.==1.0]) # Select coordinate (policy) by sample
         
         return c[t+1] # Return current action
