@@ -13,12 +13,8 @@ struct GFECategorical end
 
 struct ForwardOnlyMeta end
 
-# Dispatch for average energy computation
-get_params(q::PointMass) = mean(q)
-get_params(q::Categorical) = probvec(q)
-
 @average_energy GFECategorical (q_out::Union{Dirichlet,PointMass}, q_in::Categorical, q_A::Union{Categorical,PointMass},) = begin
-    s = get_params(q_in)
+    s = probvec(q_in)
     A = mean(q_A)
     c = mean(q_out)
 
@@ -26,13 +22,14 @@ get_params(q::Categorical) = probvec(q)
 end
 
 # Messages towards the input
+# ForwardOnlyMeta blocks the backwards message
 @rule GFECategorical(:in, Marginalisation) (m_out::Union{Dirichlet,PointMass}, q_out::Union{Dirichlet,PointMass},m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::Union{MatrixDirichlet,PointMass}, q_A::Union{MatrixDirichlet,PointMass},meta::ForwardOnlyMeta) = begin
     return missing
 end
 
 @rule GFECategorical(:in, Marginalisation) (m_out::Union{Dirichlet,PointMass}, q_out::Union{Dirichlet,PointMass},m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::Union{MatrixDirichlet,PointMass}, q_A::Union{MatrixDirichlet,PointMass},meta::Any) = begin
 
-    z = probvec(q_in)
+    s = probvec(q_in)
     d = probvec(m_in)
     A = mean(q_A)
 
@@ -42,14 +39,12 @@ end
     # Newton iterations for stability
     g(s) = s - softmax(safelog.(d) + diag(A' * safelog.(A)) + A' *(safelog.(C) - safelog.(A * s)))
 
-    z_min = z
+    s_k = deepcopy(s)
     for i in 1:20 # TODO make this user specified
-        z_k = z_min - inv(jacobian(g,z_min)) * g(z_min)
-        z_min = z_k
+        s_k = s_k - inv(jacobian(g,s_k)) * g(s_k)
     end
-    z_k = z_min
 
-    ρ = z_k ./ (d .+ tiny)
+    ρ = s_k ./ (d .+ 1e-6)
     return Categorical(ρ ./ sum(ρ))
 end
 
@@ -64,7 +59,6 @@ end
     # LogPdf
     logpdf(A) = s' *( diag(A'*safelog.(A)) + A'*(safelog.(c) - safelog.(A_bar*s)))
     return ContinuousMatrixvariateLogPdf(FullSpace(),logpdf)
-
 end
 
 # Message towards C
