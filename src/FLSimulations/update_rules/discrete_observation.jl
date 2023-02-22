@@ -271,7 +271,7 @@ function collectNaiveVariationalNodeInbounds(node::DiscreteObservation{Generaliz
         elseif node_interface === node.interfaces[1]
             # Marginal for y is always included (for rule overloading)
             push!(inbounds, target_to_marginal_entry[node_interface.edge.variable])
-        elseif node_interface === node.interfaces[3]
+        elseif (node_interface === node.interfaces[3]) && !isClamped(inbound_interface)
             # Marginal for A is always included (for dependency)
             push!(inbounds, target_to_marginal_entry[node_interface.edge.variable])
         elseif node_interface === entry.interface
