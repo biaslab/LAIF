@@ -1,5 +1,6 @@
 using ForwardDiff: jacobian
 using DomainSets: FullSpace
+include("function.jl")
 
 # Helper functions
 # We don't want log(0) to happen
@@ -10,60 +11,63 @@ softmax(x) = exp.(x) ./ sum(exp.(x))
 struct GFECategorical end
 @node GFECategorical Stochastic [out,in,A]
 
-@average_energy GFECategorical (q_out::PointMass, q_in::Categorical,q_A::PointMass,) = begin
+struct ForwardOnlyMeta end
+
+@average_energy GFECategorical (q_out::Union{Dirichlet,PointMass}, q_in::Categorical, q_A::Union{Categorical,PointMass},) = begin
     s = probvec(q_in)
     A = mean(q_A)
-    c = probvec(q_out)
+    c = mean(q_out)
 
     -s' * diag(A' * safelog.(A)) + (A*s)'* safelog.(A*s) - (A*s)'*safelog.(c)
 end
 
+# Messages towards the input
+# ForwardOnlyMeta blocks the backwards message
+@rule GFECategorical(:in, Marginalisation) (m_out::Union{Dirichlet,PointMass}, q_out::Union{Dirichlet,PointMass},m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::Union{MatrixDirichlet,PointMass}, q_A::Union{MatrixDirichlet,PointMass},meta::ForwardOnlyMeta) = begin
+    return missing
+end
 
-@rule GFECategorical(:in, Marginalisation) (m_out::{DiscreteNonParametric,PointMass}, q_out::{DiscreteNonParametric,PointMass},m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::{MatrixDirichlet,PointMass}, q_A::{MatrixDirichlet,PointMass},) = begin
+@rule GFECategorical(:in, Marginalisation) (m_out::Union{Dirichlet,PointMass}, q_out::Union{Dirichlet,PointMass},m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::Union{MatrixDirichlet,PointMass}, q_A::Union{MatrixDirichlet,PointMass},meta::Any) = begin
 
-    z = probvec(q_in)
+    s = probvec(q_in)
     d = probvec(m_in)
     A = mean(q_A)
 
     # We use the goal prior on an edge here
-    C = probvec(q_out)
+    C = mean(q_out)
 
     # Newton iterations for stability
     g(s) = s - softmax(safelog.(d) + diag(A' * safelog.(A)) + A' *(safelog.(C) - safelog.(A * s)))
 
-    z_min = z
+    s_k = deepcopy(s)
     for i in 1:20 # TODO make this user specified
-        z_k = z_min - inv(jacobian(g,z_min)) * g(z_min)
-        z_min = z_k
+        s_k = s_k - inv(jacobian(g,s_k)) * g(s_k)
     end
-    z_k = z_min
 
-    ρ = z_k ./ (d .+ tiny)
+    ρ = s_k ./ (d .+ 1e-6)
     return Categorical(ρ ./ sum(ρ))
 end
 
 
 # Message towards A
-@rule GFECategorical(:A,Marginalisation) (m_out::{DiscreteNonParametric,PointMass}, q_out::{DiscreteNonParametric,PointMass}, m_in::{DiscreteNonParametric,PointMass}, q_in::{DiscreteNonParametric,PointMass}, m_A::MatrixDirichlet, q_A::MatrixDirichlet,) = begin
+# TODO: Check that domainspace is correct
+@rule GFECategorical(:A,Marginalisation) (m_out::Union{Dirichlet,PointMass}, q_out::Union{Dirichlet,PointMass}, m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::MatrixDirichlet, q_A::MatrixDirichlet,meta::Any) = begin
     A_bar = mean(q_A)
-    c = probvec(m_out)
+    c = mean(m_out)
     s = probvec(m_in)
 
     # LogPdf
     logpdf(A) = s' *( diag(A'*safelog.(A)) + A'*(safelog.(c) - safelog.(A_bar*s)))
     return ContinuousMatrixvariateLogPdf(FullSpace(),logpdf)
-
 end
 
 # Message towards C
-@rule GFECategorical(:out,Marginalisation) (m_out::DiscreteNonParametric, q_out::DiscreteNonParametric, m_in::{DiscreteNonParametric,PointMass}, q_in::{DiscreteNonParametric,PointMass}, m_A::{MatrixDirichlet,PointMass}, q_A::{MatrixDirichlet,PointMass},) = begin
+@rule GFECategorical(:out,Marginalisation) (m_out::Union{PointMass,Dirichlet}, q_out::Union{PointMass,Dirichlet}, m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::Union{MatrixDirichlet,PointMass}, q_A::Union{MatrixDirichlet,PointMass},meta::Any) = begin
 
-    A_bar = mean(q_A)
+    A = mean(q_A)
     s = probvec(m_in)
-    return Dirichlet(A_bar * s .+ 1.0)
-
+    return Dirichlet(A * s .+ 1.0)
 end
-
 
 # Draw sample from a Matrixvariate Dirichlet distribution with independent rows
 # TODO: Find a way to not create a bunch of intermediate Dirichlet distributions
@@ -81,6 +85,7 @@ end
 # TODO: Check that the DomainSpace is right. Replace with "Unspecified"
 # TODO: Doublecheck with Semihs paper that this should really be a samplelist
 import Base: prod
+
 prod(::ProdAnalytical, left::MatrixDirichlet{Float64, Matrix{Float64}}, right::ContinuousMatrixvariateLogPdf{FullSpace{Float64}}) = begin
     _logpdf = right.logpdf
 

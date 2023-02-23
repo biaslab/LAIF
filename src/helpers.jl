@@ -1,4 +1,13 @@
-softmax(x) = exp.(x) ./ sum(exp.(x))
+function softmax(x::Vector)
+    r = x .- maximum(x)
+    clamp!(r, -100,0.0)
+    exp.(r) ./ sum(exp.(r))
+end
+
+function asym(n=Int64)
+    p = ones(n) .+ 1e-3* rand(n)
+    p ./ sum(p)
+end
 
 # Stolen from the Epistemic Value paper
 function constructABCD(α::Float64, Cs,T)
