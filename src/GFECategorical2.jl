@@ -53,7 +53,7 @@ end
 
 struct EpistemicMeta end
 
-@average_energy Transition (q_out::WMarginal, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass}, meta::EpistemicMeta) = begin
+@average_energy Transition (q_out::WMarginal, q_in::Categorical, q_A::Any, meta::EpistemicMeta) = begin
     s = probvec(q_in)
     A = mean(q_A)
     c = probvec(q_out)
@@ -61,7 +61,7 @@ struct EpistemicMeta end
     -s' * diag(A' * safelog.(A)) - (A*s)'*safelog.(c)
 end
 
-@average_energy Categorical (q_out::WMarginal, q_p::Categorical, meta::EpistemicMeta) = begin
+@average_energy Categorical (q_out::WMarginal, q_p::Any, meta::EpistemicMeta) = begin
     -sum(probvec(q_out) .* mean(ReactiveMP.clamplog, q_p))
 end
 
