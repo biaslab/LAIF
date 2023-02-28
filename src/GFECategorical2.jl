@@ -6,10 +6,9 @@ include("function.jl")
 # Helper functions
 # We don't want log(0) to happen
 safelog(x) = log(clamp(x,tiny,Inf))
-#normalize(x) = x ./ sum(x)
 softmax(x) = exp.(x) ./ sum(exp.(x))
 
-@average_energy GFECategorical (q_out::Categorical, q_in::Categorical, q_A::Union{Categorical,PointMass},) = begin
+@average_energy Transition (q_out::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::EpistemicMeta) = begin
     s = probvec(q_in)
     A = mean(q_A)
     c = probvec(q_out)
