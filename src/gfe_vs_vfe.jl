@@ -5,10 +5,9 @@ enable_autocomplete_brackets(false);colorscheme!("GruvboxDark");
 # include("GFECategorical.jl")
 include("GFECategorical2.jl")
 include("helpers.jl")
-include("qignore.jl")
 
 # gfepipeline = ReactiveMP.RequireEverythingFunctionalDependencies()
-gfepipeline = GFEPipeline((2,), (nothing, ))
+gfepipeline = GFEPipeline((2,))
 
 A,B,C,D = constructABCD(1.00,[2.,2.],2)
 
