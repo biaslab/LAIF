@@ -92,3 +92,22 @@ function constructABCD(α::Float64, Cs,T)
 
     return (A, B, C, D)
 end
+
+struct GFEPipeline <: ReactiveMP.AbstractNodeFunctionalDependenciesPipeline
+    messages_pipeline
+    marginals_pipeline
+
+    GFEPipeline(indices, start_with) = new(
+        ReactiveMP.RequireMessageFunctionalDependencies(indices, start_with),
+        ReactiveMP.RequireMarginalFunctionalDependencies(indices, start_with)
+    )
+end
+
+
+function ReactiveMP.message_dependencies(pipeline::GFEPipeline, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
+    return ReactiveMP.message_dependencies(pipeline.messages_pipeline, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
+end
+
+function ReactiveMP.marginal_dependencies(pipeline::GFEPipeline, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
+    return ReactiveMP.marginal_dependencies(pipeline.marginals_pipeline, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
+end

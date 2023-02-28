@@ -53,7 +53,8 @@ end
 # TODO: Check that domainspace is correct
 @rule GFECategorical(:A,Marginalisation) (m_out::Union{Dirichlet,PointMass}, q_out::Union{Dirichlet,PointMass}, m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::MatrixDirichlet, q_A::MatrixDirichlet,meta::Any) = begin
     A_bar = mean(q_A)
-    c = mean(m_out)
+    # TODO: Double check `m_out` or `q_out`?
+    c = mean(q_out)
     s = probvec(m_in)
 
     # LogPdf
@@ -65,7 +66,7 @@ end
 @rule GFECategorical(:out,Marginalisation) (m_out::Union{PointMass,Dirichlet}, q_out::Union{PointMass,Dirichlet}, m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::Union{MatrixDirichlet,PointMass}, q_A::Union{MatrixDirichlet,PointMass},meta::Any) = begin
 
     A = mean(q_A)
-    s = probvec(m_in)
+    s = probvec(q_in)
     return Dirichlet(A * s .+ 1.0)
 end
 
