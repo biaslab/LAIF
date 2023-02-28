@@ -8,6 +8,9 @@ include("function.jl")
 safelog(x) = log(clamp(x,tiny,Inf))
 softmax(x) = exp.(x) ./ sum(exp.(x))
 
+
+struct EpistemicMeta end
+
 @average_energy Transition (q_out::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::EpistemicMeta) = begin
     s = probvec(q_in)
     A = mean(q_A)
@@ -15,9 +18,6 @@ softmax(x) = exp.(x) ./ sum(exp.(x))
 
     -s' * diag(A' * safelog.(A)) - (A*s)'*safelog.(c)
 end
-
-
-struct EpistemicMeta end
 
 @rule Transition(:out, Marginalisation) (q_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin
     a = clamp.(exp.(mean(log, q_a) * probvec(q_in)), tiny, Inf)
