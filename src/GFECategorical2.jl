@@ -9,6 +9,15 @@ safelog(x) = log(clamp(x,tiny,Inf))
 #normalize(x) = x ./ sum(x)
 softmax(x) = exp.(x) ./ sum(exp.(x))
 
+@average_energy GFECategorical (q_out::Categorical, q_in::Categorical, q_A::Union{Categorical,PointMass},) = begin
+    s = probvec(q_in)
+    A = mean(q_A)
+    c = probvec(q_out)
+
+    -s' * diag(A' * safelog.(A)) - (A*s)'*safelog.(c)
+end
+
+
 struct EpistemicMeta end
 
 @rule Transition(:out, Marginalisation) (q_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin
@@ -17,7 +26,7 @@ struct EpistemicMeta end
     return (A = q_a, in = q_in, μ = μ)
 end
 
-@rule Transition(:a, Marginalisation) (m_out::NamedTuple, m_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin 
+@rule Transition(:a, Marginalisation) (m_out::NamedTuple, m_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin
     A_bar = mean(q_a)
     c = mean(m_out[:out]) # This comes from the `Categorical` node as a named tuple
     s = probvec(m_in)
@@ -27,7 +36,7 @@ end
 end
 
 @rule Transition(:in, Marginalisation) (m_out::Any, m_in::Categorical, q_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin
-    
+
     s = probvec(q_in)
     d = probvec(m_in)
     A = mean(q_a)
@@ -47,11 +56,11 @@ end
     return Categorical(ρ ./ sum(ρ))
 end
 
-@rule Categorical(:out, Marginalisation) (q_p::Any, meta::EpistemicMeta) = begin 
+@rule Categorical(:out, Marginalisation) (q_p::Any, meta::EpistemicMeta) = begin
     return (p = q_p, )
 end
 
-@rule Categorical(:p, Marginalisation) (m_out::NamedTuple, meta::EpistemicMeta) = begin 
+@rule Categorical(:p, Marginalisation) (m_out::NamedTuple, meta::EpistemicMeta) = begin
     A = mean(m_out[:A])
     s = probvec(m_out[:in])
     return Dirichlet(A * s .+ 1.0)
