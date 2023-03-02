@@ -1,4 +1,3 @@
-
 using ForwardDiff: jacobian
 using DomainSets: FullSpace
 include("function.jl")
@@ -71,7 +70,7 @@ end
     return (A = q_a, in = q_in, μ = μ)
 end
 
-@rule Transition(:a, Marginalisation) (q_out::WMarginal, m_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin 
+@rule Transition(:a, Marginalisation) (q_out::WMarginal, m_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin
     A_bar = mean(q_a)
     c = mean(q_out.m_p) # This comes from the `Categorical` node as a named tuple TODO: bvdmitri double check
     s = probvec(m_in)
@@ -81,7 +80,7 @@ end
 end
 
 @rule Transition(:in, Marginalisation) (q_out::WMarginal, m_in::Categorical, q_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin
-    
+
     s = probvec(q_in)
     d = probvec(m_in)
     A = mean(q_a)
@@ -105,7 +104,7 @@ end
     return (p = q_p, )
 end
 
-@rule Categorical(:p, Marginalisation) (q_out::WMarginal, meta::EpistemicMeta) = begin 
+@rule Categorical(:p, Marginalisation) (q_out::WMarginal, meta::EpistemicMeta) = begin
     A = mean(q_out.m_a)
     s = probvec(q_out.m_in)
     return Dirichlet(A * s .+ 1.0)
