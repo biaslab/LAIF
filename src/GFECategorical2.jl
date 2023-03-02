@@ -22,10 +22,10 @@ function ReactiveMP.constrain_form(::EpistemicProduct, distribution)
 end
 
 struct WMarginal{A, I, P, Q}
-    m_a :: A
-    m_in :: I
-    m_p :: P
-    q :: Q
+    m_a :: A # q(A)
+    m_in :: I # q(A) * q(z), Ā * z̄
+    m_p :: P # Marginal over C
+    q :: Q # Edge Marginal
 end
 
 ReactiveMP.probvec(dist::WMarginal) = ReactiveMP.probvec(dist.q)
@@ -70,14 +70,25 @@ end
     return (A = q_a, in = q_in, μ = μ)
 end
 
+# Message towards A
 @rule Transition(:a, Marginalisation) (q_out::WMarginal, m_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin
     A_bar = mean(q_a)
     c = mean(q_out.m_p) # This comes from the `Categorical` node as a named tuple TODO: bvdmitri double check
-    s = probvec(m_in)
+    s = probvec(q_in)
     # LogPdf
     logpdf(A) = s' *( diag(A'*safelog.(A)) + A'*(safelog.(c) - safelog.(A_bar*s)))
     return ContinuousMatrixvariateLogPdf(FullSpace(),logpdf)
 end
+
+#@rule Transition(:a, Marginalisation) (q_out::WMarginal, m_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin
+#    A_bar = mean(q_a)
+#    c = mean(q_out.m_p) # This comes from the `Categorical` node as a named tuple TODO: bvdmitri double check
+#    s = probvec(q_in)
+#    # LogPdf
+#    logpdf(A) = s' *( diag(A'*safelog.(A)) + A'*(safelog.(c) - safelog.(A_bar*s)))
+#    return ContinuousMatrixvariateLogPdf(FullSpace(),logpdf)
+#end
+
 
 @rule Transition(:in, Marginalisation) (q_out::WMarginal, m_in::Categorical, q_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin
 
@@ -86,7 +97,7 @@ end
     A = mean(q_a)
 
     # We use the goal prior on an edge here
-    C = mean(q_out.m_p) # TODO: bvdmitri double check
+    C = mean(q_out.m_p) # TODO: bvdmitri double check. Checks out --M
 
     # Newton iterations for stability
     g(s) = s - softmax(safelog.(d) + diag(A' * safelog.(A)) + A' *(safelog.(C) - safelog.(A * s)))
@@ -100,10 +111,12 @@ end
     return Categorical(ρ ./ sum(ρ))
 end
 
+# Rule towards "observations"
 @rule Categorical(:out, Marginalisation) (q_p::Any, meta::EpistemicMeta) = begin
     return (p = q_p, )
 end
 
+# Rule towards goal parameters
 @rule Categorical(:p, Marginalisation) (q_out::WMarginal, meta::EpistemicMeta) = begin
     A = mean(q_out.m_a)
     s = probvec(q_out.m_in)
