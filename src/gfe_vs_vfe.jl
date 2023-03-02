@@ -2,14 +2,14 @@ using Pkg; Pkg.activate(".."); Pkg.instantiate()
 using RxInfer,Distributions,Random,LinearAlgebra,OhMyREPL, ReactiveMP
 enable_autocomplete_brackets(false);colorscheme!("GruvboxDark");
 
+# TODO: Structure is correct now but the results are fucked
 # include("GFECategorical.jl")
 include("GFECategorical2.jl")
 include("helpers.jl")
 
-# gfepipeline = ReactiveMP.RequireEverythingFunctionalDependencies()
 gfepipeline = GFEPipeline((2,))
 
-A,B,C,D = constructABCD(1.00,[2.,2.],2)
+A,B,C,D = constructABCD(0.98,[2.,2.],2)
 
 @model function t_maze(A,B,C,T, pipeline = nothing)
 
@@ -32,13 +32,15 @@ A,B,C,D = constructABCD(1.00,[2.,2.],2)
     end
 end;
 
+# Edge Constraints
 @constraints [ warn = false ] function t_maze_constraints()
     q(x, z, w, A) = q(x)q(w)q(z)q(A)
     q(w) :: EpistemicProduct
 end
 
+# Node constraints
 @meta function t_maze_meta()
-    Transition(z, w) -> EpistemicMeta() 
+    Transition(z, w) -> EpistemicMeta()
     Categorical(x, w) -> EpistemicMeta()
 end
 
