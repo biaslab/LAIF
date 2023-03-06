@@ -56,37 +56,28 @@ initmessages = (
 
 
 # TODO: Figure out why FE increases with number of iterations - but only for the best policy?
-its = 5
+result = nothing
+its = 50
 F = zeros(4,4);
+results = Dict()
 for i in 1:4
     for j in 1:4
-        i = 4
-        j = 2
         Bs = (B[i],B[j])
-        result = inference(model = t_maze(A,Bs,C,T, gfepipeline),
+        global result = inference(model = t_maze(A,Bs,C,T, gfepipeline),
                            data= (z_0 = D, x=C),
                            initmarginals = initmarginals,
-                           initmessages = initmessages,
+                           # initmessages = initmessages,
                            constraints = t_maze_constraints(),
                            meta = t_maze_meta(),
                            free_energy=true,
                            addons = (AddonMemory(),),
                            iterations = its)
+       results[(i, j)] = result
         F[i,j] = result.free_energy[end] ./ log(2)
     end
 end
 
-F
 
-bob = result.posteriors[:w][end][1]
-dude = result.posteriors[:z][end-1][1]
-
-bob
-A* probvec(dude)
-
-A* probvec(bob.m_in)
-
-dude == bob.m_in
 
 # q_w is always one iteration behind
 # Wmarginal.q stays flat? Initial message towards GFEnode never gets updated

@@ -7,6 +7,8 @@ include("function.jl")
 safelog(x) = log(clamp(x,tiny,Inf))
 softmax(x) = exp.(x) ./ sum(exp.(x))
 
+ReactiveMP.mean(::typeof(safelog), p::PointMass) = safelog.(mean(p))
+
 import ReactiveMP: AbstractFormConstraint
 
 struct EpistemicProduct <: AbstractFormConstraint end
@@ -41,6 +43,10 @@ end
 
 function ReactiveMP.message_dependencies(pipeline::GFEPipeline, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
     # We simply override the messages dependencies with the provided indices
+    # for index in pipeline.indices
+    #     output = ReactiveMP.messagein(nodeinterfaces[index])
+    #     ReactiveMP.setmessage!(output, Categorical(ones(8) ./ 8))
+    # end
     return map(inds -> map(i -> @inbounds(nodeinterfaces[i]), inds), pipeline.indices)
 end
 
@@ -52,9 +58,9 @@ end
 
 struct EpistemicMeta end
 
-@average_energy Transition (q_out::WMarginal, q_in::Categorical, q_A::Any, meta::EpistemicMeta) = begin
+@average_energy Transition (q_out::WMarginal, q_in::Categorical, q_a::PointMass, meta::EpistemicMeta) = begin
     s = probvec(q_in)
-    A = mean(q_A)
+    A = mean(q_a)
     c = probvec(q_out)
 
     -s' * diag(A' * safelog.(A)) - (A*s)'*safelog.(c)
@@ -65,7 +71,13 @@ end
 end
 
 @rule Transition(:out, Marginalisation) (m_in::Categorical, q_in::Categorical, q_a::Any, meta::EpistemicMeta) = begin
-    a = clamp.(exp.(mean(log, q_a) * probvec(q_in)), tiny, Inf)
+    a = clamp.(exp.(mean(safelog, q_a) * probvec(q_in)), tiny, Inf)
+    μ = Categorical(a ./ sum(a))
+    return (A = q_a, in = q_in, μ = μ)
+end
+
+@rule Transition(:out, Marginalisation) (m_in::Categorical, q_in::Categorical, q_a::PointMass, meta::EpistemicMeta) = begin
+    a = mean(q_a) * probvec(q_in)
     μ = Categorical(a ./ sum(a))
     return (A = q_a, in = q_in, μ = μ)
 end
