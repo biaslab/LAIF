@@ -63,7 +63,7 @@ struct EpistemicMeta end
     A = mean(q_a)
     c = probvec(q_out)
 
-    -s' * diag(A' * safelog.(A)) - (A*s)'*safelog.(c)
+    -s' * diag(A' * safelog.(A)) - (A*s)'*safelog.(c) + (A*s)' * safelog.(A*s)
 end
 
 @average_energy Categorical (q_out::WMarginal, q_p::Any, meta::EpistemicMeta) = begin
