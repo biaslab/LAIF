@@ -11,7 +11,6 @@ include("helpers.jl")
     return Categorical(a ./ sum(a))
 end
 
-A,B,C,D = constructABCD(0.90,[2.,2.],2)
 
 @model function t_maze(A,B,C,D,T)
 
@@ -37,24 +36,26 @@ end
 
 
 T = 2
+A,B,C,D = constructABCD(0.90,ones(T)*2,T);
 
 initmarginals = (
                  z = [Categorical(fill(1/8,8)) for t in 1:T],
                  z_0 = [Categorical(fill(1/8,8))],
                 );
 
-i = 4
-j= 2
-its=10
-Bs = (B[i],B[j])
+its=5
+F = zeros(4,4);
 
-result = inference(model = t_maze(A,Bs,C,D,T),
-                   data= (x=C,),
-                   initmarginals = initmarginals,
-                   meta = t_maze_meta(),
-                   free_energy=true,
-                   iterations = its)
-
-using Plots, UnicodePlots
-unicodeplots()
-plot(result.free_energy ./ log(2))
+for i in 1:4
+    for j in 1:4
+        Bs = (B[i],B[j])
+        result = inference(model = t_maze(A,Bs,C,D,T),
+                           data= (x=C,),
+                           initmarginals = initmarginals,
+                           meta = t_maze_meta(),
+                           free_energy=true,
+                           iterations = its)
+        F[i,j] = result.free_energy[end] ./ log(2)
+    end
+end
+F
