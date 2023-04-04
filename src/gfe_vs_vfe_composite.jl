@@ -22,7 +22,8 @@ end
     z_prev = z_0
 
     for t in 1:T
-        z[t] ~ Transition(z_prev,B[t])# where {q = MeanField()}
+        z[t] ~ Transition(z_prev,B[t])
+        # We use the pipeline to only initialise the messages we need
         x[t] ~ Observation(z[t], A) where {q = MeanField(), pipeline = GFEPipeline((2,),vague(Categorical,8))}
         z_prev = z[t]
     end
