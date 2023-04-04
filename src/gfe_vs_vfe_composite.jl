@@ -2,7 +2,7 @@ using Pkg; Pkg.activate(".."); Pkg.instantiate()
 using RxInfer,Distributions,Random,LinearAlgebra,OhMyREPL, ReactiveMP
 enable_autocomplete_brackets(false);colorscheme!("GruvboxDark");
 
-include("GFEComposite.jl")
+include("DiscreteLAIF.jl")
 include("helpers.jl")
 
 # Rule is missing from RxInfer
