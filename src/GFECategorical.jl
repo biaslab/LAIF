@@ -1,40 +1,106 @@
 using ForwardDiff: jacobian
 using DomainSets: FullSpace
-include("function.jl")
+include("matrixlogpdf.jl")
 
 # Helper functions
 # We don't want log(0) to happen
 safelog(x) = log(clamp(x,tiny,Inf))
-#normalize(x) = x ./ sum(x)
 softmax(x) = exp.(x) ./ sum(exp.(x))
 
-struct GFECategorical end
-@node GFECategorical Stochastic [out,in,A]
+ReactiveMP.mean(::typeof(safelog), p::PointMass) = safelog.(mean(p))
 
-struct ForwardOnlyMeta end
+import ReactiveMP: AbstractFormConstraint
 
-@average_energy GFECategorical (q_out::Union{Dirichlet,PointMass}, q_in::Categorical, q_A::Union{Categorical,PointMass},) = begin
+struct PSubstitutionProduct <: AbstractFormConstraint end
+
+ReactiveMP.make_form_constraint(::Type{PSubstitutionProduct}) = PSubstitutionProduct()
+
+ReactiveMP.is_point_mass_form_constraint(::PSubstitutionProduct) = false
+ReactiveMP.default_form_check_strategy(::PSubstitutionProduct)   = FormConstraintCheckLast()
+ReactiveMP.default_prod_constraint(::PSubstitutionProduct)       = ProdGeneric()
+
+function ReactiveMP.constrain_form(::PSubstitutionProduct, distribution)
+    error("Unexpected")
+end
+
+# Custom marginal struct for the goal edge inside composite node
+struct WMarginal{A, I, P, Q}
+    m_a :: A # q(A)
+    m_in :: I # q(A) * q(z), Ā * z̄
+    m_p :: P # Marginal over C
+    q :: Q # Edge Marginal
+end
+
+ReactiveMP.probvec(dist::WMarginal) = ReactiveMP.probvec(dist.q)
+Distributions.entropy(dist::WMarginal) = entropy(dist.q)
+
+function ReactiveMP.constrain_form(::PSubstitutionProduct, distribution::DistProduct)
+    return WMarginal(distribution.left[:A], distribution.left[:in], distribution.right[:p], distribution.left[:μ])
+end
+
+struct GFEPipeline{I} <: ReactiveMP.AbstractNodeFunctionalDependenciesPipeline
+    indices::I
+end
+
+function ReactiveMP.message_dependencies(pipeline::GFEPipeline, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
+    # We simply override the messages dependencies with the provided indices
+    # for index in pipeline.indices
+    #     output = ReactiveMP.messagein(nodeinterfaces[index])
+    #     ReactiveMP.setmessage!(output, Categorical(ones(8) ./ 8))
+    # end
+    return map(inds -> map(i -> @inbounds(nodeinterfaces[i]), inds), pipeline.indices)
+end
+
+function ReactiveMP.marginal_dependencies(pipeline::GFEPipeline, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
+    # For marginals we require marginal on the same edges as in the provided indices
+    require_marginal = ReactiveMP.RequireMarginalFunctionalDependencies(pipeline.indices, map(_ -> nothing, pipeline.indices))
+    return ReactiveMP.marginal_dependencies(require_marginal, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
+end
+
+struct PSubstitutionMeta end
+
+@average_energy Transition (q_out::WMarginal, q_in::Categorical, q_a::PointMass, meta::PSubstitutionMeta) = begin
     s = probvec(q_in)
-    A = mean(q_A)
-    c = mean(q_out)
+    A = mean(q_a)
+    c = probvec(q_out)
 
-    -s' * diag(A' * safelog.(A)) + (A*s)'* safelog.(A*s) - (A*s)'*safelog.(c)
+    -s' * diag(A' * safelog.(A)) - (A*s)'*safelog.(c) + (A*s)' * safelog.(A*s)
 end
 
-# Messages towards the input
-# ForwardOnlyMeta blocks the backwards message
-@rule GFECategorical(:in, Marginalisation) (m_out::Union{Dirichlet,PointMass}, q_out::Union{Dirichlet,PointMass},m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::Union{MatrixDirichlet,PointMass}, q_A::Union{MatrixDirichlet,PointMass},meta::ForwardOnlyMeta) = begin
-    return missing
+@average_energy Categorical (q_out::WMarginal, q_p::Any, meta::PSubstitutionMeta) = begin
+    -sum(probvec(q_out) .* mean(ReactiveMP.clamplog, q_p))
 end
 
-@rule GFECategorical(:in, Marginalisation) (m_out::Union{Dirichlet,PointMass}, q_out::Union{Dirichlet,PointMass},m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::Union{MatrixDirichlet,PointMass}, q_A::Union{MatrixDirichlet,PointMass},meta::Any) = begin
+@rule Transition(:out, Marginalisation) (m_in::Categorical, q_in::Categorical, q_a::Any, meta::PSubstitutionMeta) = begin
+    a = clamp.(exp.(mean(safelog, q_a) * probvec(q_in)), tiny, Inf)
+    μ = Categorical(a ./ sum(a))
+    return (A = q_a, in = q_in, μ = μ)
+end
+
+@rule Transition(:out, Marginalisation) (m_in::Categorical, q_in::Categorical, q_a::PointMass, meta::PSubstitutionMeta) = begin
+    a = mean(q_a) * probvec(q_in)
+    μ = Categorical(a ./ sum(a))
+    return (A = q_a, in = q_in, μ = μ)
+end
+
+# Message towards A
+@rule Transition(:a, Marginalisation) (q_out::WMarginal, m_in::Categorical, q_a::Any, meta::PSubstitutionMeta) = begin
+    A_bar = mean(q_a)
+    c = mean(q_out.m_p) # This comes from the `Categorical` node as a named tuple TODO: bvdmitri double check
+    s = probvec(q_in)
+    # LogPdf
+    logpdf(A) = s' *( diag(A'*safelog.(A)) + A'*(safelog.(c) - safelog.(A_bar*s)))
+    return ContinuousMatrixvariateLogPdf(FullSpace(),logpdf)
+end
+
+@rule Transition(:in, Marginalisation) (q_out::WMarginal, m_in::Categorical, q_in::Categorical, q_a::Any, meta::PSubstitutionMeta) = begin
 
     s = probvec(q_in)
     d = probvec(m_in)
-    A = mean(q_A)
+    A = mean(q_a)
 
-    # We use the goal prior on an edge here
-    C = mean(q_out)
+    # Grab the goal marginal
+    C = mean(q_out.m_p) # TODO: bvdmitri double check. Checks out --M
 
     # Newton iterations for stability
     g(s) = s - softmax(safelog.(d) + diag(A' * safelog.(A)) + A' *(safelog.(C) - safelog.(A * s)))
@@ -48,58 +114,15 @@ end
     return Categorical(ρ ./ sum(ρ))
 end
 
-
-# Message towards A
-# TODO: Check that domainspace is correct
-@rule GFECategorical(:A,Marginalisation) (m_out::Union{Dirichlet,PointMass}, q_out::Union{Dirichlet,PointMass}, m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::MatrixDirichlet, q_A::MatrixDirichlet,meta::Any) = begin
-    A_bar = mean(q_A)
-    c = mean(m_out)
-    s = probvec(m_in)
-
-    # LogPdf
-    logpdf(A) = s' *( diag(A'*safelog.(A)) + A'*(safelog.(c) - safelog.(A_bar*s)))
-    return ContinuousMatrixvariateLogPdf(FullSpace(),logpdf)
+# Rule towards "observations"
+@rule Categorical(:out, Marginalisation) (q_p::Any, meta::PSubstitutionMeta) = begin
+    return (p = q_p, )
 end
 
-# Message towards C
-@rule GFECategorical(:out,Marginalisation) (m_out::Union{PointMass,Dirichlet}, q_out::Union{PointMass,Dirichlet}, m_in::DiscreteNonParametric, q_in::DiscreteNonParametric, m_A::Union{MatrixDirichlet,PointMass}, q_A::Union{MatrixDirichlet,PointMass},meta::Any) = begin
-
-    A = mean(q_A)
-    s = probvec(m_in)
+# Rule towards goal parameters
+@rule Categorical(:p, Marginalisation) (q_out::WMarginal, meta::PSubstitutionMeta) = begin
+    A = mean(q_out.m_a)
+    s = probvec(q_out.m_in)
     return Dirichlet(A * s .+ 1.0)
 end
 
-# Draw sample from a Matrixvariate Dirichlet distribution with independent rows
-# TODO: Find a way to not create a bunch of intermediate Dirichlet distributions
-import Distributions.rand
-function rand(dist::MatrixDirichlet)
-    α = clamp.(dist.a,tiny,Inf)
-    # Sample from independent rowwise Dirichlet distributions and replace NaN's with 0.0.
-    # We replace NaN's to allow for rows of 0's which are common in AIF modelling
-    replace!(reduce(hcat, Distributions.rand.(Dirichlet.(eachrow(α))))', NaN => 0.0)
-end
-
-
-# We need a product of MatrixVariate Logpdf's and MatrixDirichlet to compute the marginal over the transition matrix. We approximate it using EVMP (Add citation to Semihs paper)
-# TODO: Is this really ProdAnalytical?
-# TODO: Check that the DomainSpace is right. Replace with "Unspecified"
-# TODO: Doublecheck with Semihs paper that this should really be a samplelist
-import Base: prod
-
-prod(::ProdAnalytical, left::MatrixDirichlet{Float64, Matrix{Float64}}, right::ContinuousMatrixvariateLogPdf{FullSpace{Float64}}) = begin
-    _logpdf = right.logpdf
-
-    # Draw 50 samples
-    weights = []
-    samples = []
-    for n in 1:50
-        A_hat = rand(left)
-        ρ_n = exp(_logpdf(A_hat))
-
-        push!(samples, A_hat)
-        push!(weights, ρ_n)
-    end
-    #Z = sum(weights)
-    #return MatrixDirichlet(sum(samples .* weights) / Z)
-    return SampleList(samples,weights)
-end
