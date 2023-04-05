@@ -24,7 +24,7 @@ end
     for t in 1:T
         z[t] ~ Transition(z_prev,B[t])
         # We use the pipeline to only initialise the messages we need
-        x[t] ~ Observation(z[t], A) where {q = MeanField(), pipeline = GFEPipeline((2,),vague(Categorical,8))}
+        x[t] ~ DiscreteLAIF(z[t], A) where {q = MeanField(), pipeline = GFEPipeline((2,),vague(Categorical,8))}
         z_prev = z[t]
     end
     return z, z_0
@@ -32,7 +32,7 @@ end;
 
 # Node constraints
 @meta function t_maze_meta()
-    Observation(x,z) -> PSubstitutionMeta()
+    DiscreteLAIF(x,z) -> PSubstitutionMeta()
 end
 
 
