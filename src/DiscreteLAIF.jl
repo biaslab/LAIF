@@ -2,7 +2,9 @@ using ForwardDiff: jacobian
 using DomainSets: FullSpace
 include("matrixlogpdf.jl")
 
-#TODO: Make delta constrained updates/energy and BFE updates/energy
+#TODO: make sure BetheMeta does not take any arbitrary thing
+#TODO: Reproduced FL experiments
+#TODO: Check that pipeline works for messages towards A. Do we still get q_A?
 
 # Use custom pipeline to get marginal and message on incoming edge
 struct GFEPipeline{I,M} <: ReactiveMP.AbstractNodeFunctionalDependenciesPipeline
@@ -24,6 +26,7 @@ function ReactiveMP.marginal_dependencies(pipeline::GFEPipeline, nodeinterfaces,
     require_marginal = ReactiveMP.RequireMarginalFunctionalDependencies(pipeline.indices, map(_ -> nothing, pipeline.indices))
     return ReactiveMP.marginal_dependencies(require_marginal, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
 end
+
 # Helper functions
 # We don't want log(0) to happen
 safelog(x) = log(clamp(x,tiny,Inf))
@@ -31,25 +34,25 @@ softmax(x) = exp.(x) ./ sum(exp.(x))
 
 # Metas to change behaviour between BFE and GFE
 struct PSubstitutionMeta end
+struct UnobservedBetheMeta end
 
 # Optionally add data constraints
-struct BetheMeta
-    δ
+struct ObservedBetheMeta{I}
+    δ::I
 end
 
-# Constructor for default case, no data constraints
-# TODO: make sure BetheMeta does not take any arbitrary thing
-function BetheMeta()
-    return BetheMeta(Missing)
+struct ObservedPSubstitutionMeta{I}
+    δ::I
 end
 
-struct Observation end
+
+struct DiscreteLAIF end
 # Define node
-@node Observation Stochastic [out,in, A]
+@node DiscreteLAIF Stochastic [out,in, A]
 
-### GFE SECTION
+### Unobserved PSubstitution
 # GFE Energy
-@average_energy Observation (q_out::Union{Dirichlet,PointMass}, q_in::Categorical, q_A::Union{PointMass,MatrixDirichlet},meta::PSubstitutionMeta) = begin
+@average_energy DiscreteLAIF (q_out::Union{Dirichlet,PointMass}, q_in::Categorical, q_A::Union{PointMass,MatrixDirichlet},meta::PSubstitutionMeta) = begin
     s = probvec(q_in)
     A = mean(q_A)
     c = mean(q_out)
@@ -59,7 +62,7 @@ end
 
 
 # GFE Message towards A
-@rule Observation(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, meta::PSubstitutionMeta) = begin
+@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, meta::PSubstitutionMeta) = begin
     A_bar = mean(q_A)
     c = mean(q_out)
     s = probvec(q_in)
@@ -70,7 +73,7 @@ end
 end
 
 # GFE Message towards input
-@rule Observation(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::PSubstitutionMeta) = begin
+@rule DiscreteLAIF(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::PSubstitutionMeta) = begin
 
     d = probvec(m_in)
     s = probvec(q_in)
@@ -92,8 +95,138 @@ end
 
 
 # Message towards output (goal parameters)
-@rule Observation(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::PSubstitutionMeta) = begin
+@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::PSubstitutionMeta) = begin
     A = mean(q_A)
     s = probvec(q_in)
     return Dirichlet(A * s .+ 1.0)
+end
+
+### Observed PSubstitution
+# GFE Energy
+@average_energy DiscreteLAIF (q_out::Union{Dirichlet,PointMass}, q_in::Categorical, q_A::Union{PointMass,MatrixDirichlet},meta::ObservedPSubstitutionMeta) = begin
+    x = meta.δ
+    s = probvec(q_in)
+    A = mean(q_A)
+    c = mean(q_out)
+
+    -x' * (safelog.(A)*s + safelog.(c))
+end
+
+
+# GFE Message towards A
+@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, meta::ObservedPSubstitutionMeta) = begin
+    x = meta.δ
+    s = probvec(q_in)
+
+    return MatrixDirichlet(x*s' .+ 1)
+end
+
+# GFE Message towards input
+@rule DiscreteLAIF(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::ObservedPSubstitutionMeta) = begin
+    x = meta.δ
+    A = mean(q_A)
+    ρ = safelog.(A)' * x
+
+    return Categorical(softmax(ρ))
+end
+
+
+# Message towards output (goal parameters)
+@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::ObservedPSubstitutionMeta) = begin
+    x = meta.δ
+    return Dirichlet(x .+ 1)
+end
+
+### Unobserved Bethe
+# BFE Energy
+@average_energy DiscreteLAIF (q_out::Union{Dirichlet,PointMass}, q_in::Categorical, q_A::Union{PointMass,MatrixDirichlet},meta::UnobservedBetheMeta) = begin
+
+    s = probvec(q_in)
+    A = mean(q_A)
+    c = mean(q_out)
+
+    # Compute internal marginal
+    x = softmax(safelog.(A) * s + safelog.(c))
+
+    -x' * (safelog.(A)*s + safelog.(c)) + x' * safelog.(x)
+end
+
+
+# BFE Message towards A
+@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, meta::UnobservedBetheMeta) = begin
+
+    c = mean(q_out)
+    s = probvec(q_in)
+    A = mean(q_A)
+
+    # Compute internal marginal
+    x = softmax(safelog.(A) * s + safelog.(c))
+
+    return MatrixDirichlet(x*s' .+ 1)
+end
+
+# BFE Message towards input
+@rule DiscreteLAIF(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::UnobservedBetheMeta) = begin
+    c = mean(q_out)
+    s = probvec(q_in)
+    A = mean(q_A)
+
+    # Compute internal marginal
+    x = softmax(safelog.(A) * s + safelog.(c))
+
+    ρ = safelog.(A)' * x
+
+    return Categorical(softmax(ρ))
+end
+
+
+# BFE Message towards output (goal parameters)
+@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::UnobservedBetheMeta) = begin
+    c = mean(q_out)
+    s = probvec(q_in)
+    A = mean(q_A)
+
+    # Compute internal marginal
+    x = softmax(safelog.(A) * s + safelog.(c))
+    return Dirichlet(x .+ 1)
+end
+
+### Observed Bethe
+# BFE Energy
+@average_energy DiscreteLAIF (q_out::Union{Dirichlet,PointMass}, q_in::Categorical, q_A::Union{PointMass,MatrixDirichlet},meta::ObservedBetheMeta) = begin
+
+    s = probvec(q_in)
+    A = mean(q_A)
+    c = mean(q_out)
+
+    x = meta.δ
+
+    -x' * (safelog.(A)*s + safelog.(c)) + x' * safelog.(x)
+end
+
+
+# BFE Message towards A
+@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, meta::ObservedBetheMeta) = begin
+
+    s = probvec(q_in)
+    x = meta.δ
+
+    return MatrixDirichlet(x*s' .+ 1)
+end
+
+# BFE Message towards input
+@rule DiscreteLAIF(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::ObservedBetheMeta) = begin
+    A = mean(q_A)
+    x = meta.δ
+
+    ρ = safelog.(A)' * x
+
+    return Categorical(softmax(ρ))
+end
+
+
+# BFE Message towards output (goal parameters)
+@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::ObservedBetheMeta) = begin
+    x = meta.δ
+    return Dirichlet(x .+ 1)
 end
