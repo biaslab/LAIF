@@ -62,7 +62,7 @@ end
 
 
 # GFE Message towards A
-@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, meta::PSubstitutionMeta) = begin
+@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, m_A::Any, meta::PSubstitutionMeta) = begin
     A_bar = mean(q_A)
     c = mean(q_out)
     s = probvec(q_in)
