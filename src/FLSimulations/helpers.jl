@@ -69,15 +69,15 @@ function unsafeLogMean(dist::Distribution{MatrixVariate, SampleList})
     return sum
 end
 
-unsafeAmbMean(dist::Distribution{MatrixVariate, PointMass}) = amb(dist.params[:m])
+unsafeMeanAmb(dist::Distribution{MatrixVariate, PointMass}) = (dist.params[:m], amb(dist.params[:m]))
 
-function unsafeAmbMean(dist::Distribution{MatrixVariate, Dirichlet})
+function unsafeMeanAmb(dist::Distribution{MatrixVariate, Dirichlet})
     n_samples = 10 # Number of samples is fixed
     s = sample(dist, n_samples)
-    sum(amb.(s))./n_samples
+    (sum(s)./n_samples, sum(amb.(s))./n_samples)
 end
 
-unsafeAmbMean(dist::Distribution{MatrixVariate, SampleList}) = sum(amb.(dist.params[:s]).*dist.params[:w])
+unsafeMeanAmb(dist::Distribution{MatrixVariate, SampleList}) = (sum(dist.params[:s].*dist.params[:w]), sum(amb.(dist.params[:s]).*dist.params[:w]))
 
 function softmax(v::Vector)
     r = v .- maximum(v)

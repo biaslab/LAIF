@@ -31,8 +31,7 @@ function ruleVBDiscreteObservationGeneralizedS(
 
     d = msg_s.dist.params[:p]
     s_0 = unsafeMean(marg_s)
-    A = unsafeMean(marg_A)
-    amb_A = unsafeAmbMean(marg_A)
+    (A, amb_A) = unsafeMeanAmb(marg_A)
     log_c = unsafeLogMean(marg_c)
 
     # Root-finding problem for marginal statistics
