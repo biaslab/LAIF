@@ -1,3 +1,4 @@
+import LinearAlgebra: I
 function softmax(x::Vector)
     r = x .- maximum(x)
     clamp!(r, -100,0.0)

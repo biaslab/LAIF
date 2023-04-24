@@ -43,9 +43,6 @@ include("helpers.jl");
     end
 end;
 
-initmarginals = (
-                 z = [Categorical(fill(1. /8. ,8)) for t in 1:T],
-                );
 
 
 
@@ -59,6 +56,9 @@ end
 end
 
 T = 100_000;
+initmarginals = (
+                 z = [Categorical(fill(1. /8. ,8)) for t in 1:T],
+                );
 
 A,B,C,D = constructABCD(0.9,[2.0 for t in 1:T],T);
 

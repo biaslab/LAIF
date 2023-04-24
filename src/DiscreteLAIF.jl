@@ -73,7 +73,7 @@ end
 end
 
 # GFE Message towards input
-@rule DiscreteLAIF(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::PSubstitutionMeta) = begin
+@rule DiscreteLAIF(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass}, m_A::Any,meta::PSubstitutionMeta) = begin
 
     d = probvec(m_in)
     s = probvec(q_in)
