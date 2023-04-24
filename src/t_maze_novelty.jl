@@ -64,7 +64,8 @@ include("DiscreteLAIF.jl");
     for t in 1:T
         switch[t] ~ Categorical(fill(1. /4. ,4))
         z[t] ~ TransitionMixture(z_prev,switch[t], B[1],B[2],B[3],B[4])
-        x[t] ~ DiscreteLAIF(z[t], A) where {q = MeanField(), pipeline = GFEPipeline((2,3),vague(Categorical,8))}
+        x[t] ~ DiscreteLAIF(z[t], A) where {q = MeanField(), pipeline = GFEPipeline((2,3),(Nothing,vague(Categorical,8),vague(MatrixDirichlet,size(θ_A))))
+                                                                                   }
         z_prev = z[t]
     end
 end;

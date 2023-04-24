@@ -16,7 +16,7 @@ function ReactiveMP.message_dependencies(pipeline::GFEPipeline, nodeinterfaces, 
     # We simply override the messages dependencies with the provided indices
     for index in pipeline.indices
         output = ReactiveMP.messagein(nodeinterfaces[index])
-        ReactiveMP.setmessage!(output, pipeline.init_message)
+        ReactiveMP.setmessage!(output, pipeline.init_message[index])
     end
     return map(inds -> map(i -> @inbounds(nodeinterfaces[i]), inds), pipeline.indices)
 end
