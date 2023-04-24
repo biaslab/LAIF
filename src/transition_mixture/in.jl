@@ -1,6 +1,6 @@
-using Pkg; Pkg.activate("..");Pkg.instantiate()
-using RxInfer,ReactiveMP,OhMyREPL,Distributions
-enable_autocomplete_brackets(false);colorscheme!("GruvboxDark")
+#using Pkg; Pkg.activate("..");Pkg.instantiate()
+#using RxInfer,ReactiveMP,OhMyREPL,Distributions
+#enable_autocomplete_brackets(false);colorscheme!("GruvboxDark")
 
 import Base.Iterators.repeated
 
