@@ -19,19 +19,19 @@
     return ContingencyTensor(B ./ sum(B))
 end
 
-@average_energy TransitionMixture (q_out_in_z::ContingencyTensor, q_B1::PointMass, q_B2::PointMass, q_B3::PointMass, q_B4::PointMass, meta::PSubstitutionMeta) = begin
+@average_energy TransitionMixture (out_in_z::ContingencyTensor, B1::PointMass, B2::PointMass, B3::PointMass, B4::PointMass) = begin
 
-    log_A_bar = [mean(ReactiveMP.clamplog,q_B1);;; mean(ReactiveMP.clamplog,q_B2);;; mean(ReactiveMP.clamplog,q_B3);;; mean(ReactiveMP.clamplog,q_B4)]
+    log_A_bar = [mean(ReactiveMP.clamplog,B1);;; mean(ReactiveMP.clamplog,B2);;; mean(ReactiveMP.clamplog,B3);;; mean(ReactiveMP.clamplog,B4)]
 
     U = 0
     for i in 1:4
        U+= -tr(B[:,:,i]' *log_A_bar[:,:,i] )
     end
-    U
+    return U
 end
 
-include("in.jl")
-include("out.jl")
-include("switch.jl")
-include("marginals.jl")
+#include("in.jl")
+#include("out.jl")
+#include("switch.jl")
+#include("marginals.jl")
 
