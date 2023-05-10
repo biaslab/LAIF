@@ -29,7 +29,7 @@ end
 
 # Helper functions
 # We don't want log(0) to happen
-safelog(x) = log(clamp(x,tiny,Inf))
+safelog(x) = ReactiveMP.clamplog(x)#log(clamp(x,tiny,Inf))
 softmax(x) = exp.(x) ./ sum(exp.(x))
 
 # Metas to change behaviour between BFE and GFE
@@ -51,6 +51,7 @@ struct DiscreteLAIF end
 @node DiscreteLAIF Stochastic [out,in, A]
 
 ### Unobserved PSubstitution
+_h(A) = -diag(A' * ReactiveMP.clamplog.(A))
 # GFE Energy
 @average_energy DiscreteLAIF (q_out::Union{Dirichlet,PointMass}, q_in::Categorical, q_A::Union{PointMass,MatrixDirichlet},meta::PSubstitutionMeta) = begin
     s = probvec(q_in)
@@ -74,6 +75,12 @@ end
 
 # GFE Message towards input
 @rule DiscreteLAIF(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass}, m_A::Any,meta::PSubstitutionMeta) = begin
+    # Ignore message from A
+    @call_rule typeof(DiscreteLAIF)(:in,Marginalisation) (q_out = q_out, m_in = m_in, q_in = q_in, q_A = q_A, meta=meta)
+end
+
+
+@rule DiscreteLAIF(:in, Marginalisation) (m_in::DiscreteNonParametric, q_out::Union{Dirichlet,PointMass}, q_in::DiscreteNonParametric, q_A::Union{MatrixDirichlet,PointMass}, meta::PSubstitutionMeta) = begin
 
     d = probvec(m_in)
     s = probvec(q_in)

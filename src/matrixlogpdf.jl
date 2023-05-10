@@ -80,6 +80,7 @@ prod(::ProdAnalytical, left::MatrixDirichlet{Float64, Matrix{Float64}}, right::C
     end
 #
     Z = sum(weights)
-    return MatrixDirichlet(sum(samples .* weights) / Z)
+    # We clamp here to avoid 0 entries that violate the domain of a MatrixDirichlet. This should get cleaned up once a more permanent solution is in RxInfer
+    return MatrixDirichlet(clamp.(sum(samples .* weights) / Z, tiny,Inf))
     #return SampleList(samples,weights ./ sum(weights))
 end

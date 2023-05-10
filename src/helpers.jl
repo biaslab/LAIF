@@ -39,7 +39,11 @@ function constructABCD(α::Float64, Cs,T)
     A[9:12, 5:6]  = A_3
     A[13:16, 7:8] = A_4
 
+    # 0's violate the domain of the Dirichlet distribution and breaks FE calculation
+    A .+= tiny
+
     # Transition model, Karls version
+    #
    # B_1 = kron([1 0 0 1; # Row: can I move to 1?
    #             0 1 0 0;
    #             0 0 1 0;
