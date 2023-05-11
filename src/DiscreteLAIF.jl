@@ -50,13 +50,11 @@ struct DiscreteLAIF end
 # Define node
 @node DiscreteLAIF Stochastic [out,in, A]
 
-### Unobserved PSubstitution
-
 # Compute the h vector
 _h(A) = -diag(A' * ReactiveMP.clamplog.(A))
 mean_h(A) = mean( _h.(rand(A,50)))
 
-
+### Unobserved PSubstitution
 # GFE Energy
 @average_energy DiscreteLAIF (q_out::Union{Dirichlet,PointMass}, q_in::Categorical, q_A::Union{PointMass,MatrixDirichlet},meta::PSubstitutionMeta) = begin
     s = probvec(q_in)
@@ -80,8 +78,8 @@ end
 end
 
 # GFE Message towards input
-@rule DiscreteLAIF(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass}, m_A::Any,meta::PSubstitutionMeta) = begin
-    # Ignore message from A
+@rule DiscreteLAIF(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass}, m_A::Any,meta::Any) = begin
+    # Ignore message from A for both the observed and unobserved cases
     @call_rule typeof(DiscreteLAIF)(:in,Marginalisation) (q_out = q_out, m_in = m_in, q_in = q_in, q_A = q_A, meta=meta)
 end
 
@@ -109,7 +107,7 @@ end
 
 
 # Message towards output (goal parameters)
-@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::PSubstitutionMeta) = begin
+@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},m_A::Any,meta::PSubstitutionMeta) = begin
     A = mean(q_A)
     s = probvec(q_in)
     return Dirichlet(A * s .+ 1.0)
@@ -128,7 +126,7 @@ end
 
 
 # GFE Message towards A
-@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, meta::ObservedPSubstitutionMeta) = begin
+@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, m_A::Any, meta::ObservedPSubstitutionMeta) = begin
     x = meta.δ
     s = probvec(q_in)
 
@@ -146,7 +144,7 @@ end
 
 
 # Message towards output (goal parameters)
-@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::ObservedPSubstitutionMeta) = begin
+@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},m_A::Any,meta::ObservedPSubstitutionMeta) = begin
     x = meta.δ
     return Dirichlet(x .+ 1)
 end
@@ -167,7 +165,7 @@ end
 
 
 # BFE Message towards A
-@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, meta::UnobservedBetheMeta) = begin
+@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, m_A::Any, meta::UnobservedBetheMeta) = begin
 
     c = mean(q_out)
     s = probvec(q_in)
@@ -195,7 +193,7 @@ end
 
 
 # BFE Message towards output (goal parameters)
-@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::UnobservedBetheMeta) = begin
+@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},m_A::Any, meta::UnobservedBetheMeta) = begin
     c = mean(q_out)
     s = probvec(q_in)
     A = mean(q_A)
@@ -220,7 +218,7 @@ end
 
 
 # BFE Message towards A
-@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, meta::ObservedBetheMeta) = begin
+@rule DiscreteLAIF(:A, Marginalisation) (q_out::Union{PointMass,Dirichlet}, m_in::Categorical, q_in::Categorical, q_A::MatrixDirichlet, m_A::Any, meta::ObservedBetheMeta) = begin
 
     s = probvec(q_in)
     x = meta.δ
@@ -229,7 +227,7 @@ end
 end
 
 # BFE Message towards input
-@rule DiscreteLAIF(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::ObservedBetheMeta) = begin
+@rule DiscreteLAIF(:in, Marginalisation) (q_out::Union{Dirichlet,PointMass},m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass}, m_A::Any, meta::ObservedBetheMeta) = begin
     A = mean(q_A)
     x = meta.δ
 
@@ -240,7 +238,7 @@ end
 
 
 # BFE Message towards output (goal parameters)
-@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass},meta::ObservedBetheMeta) = begin
+@rule DiscreteLAIF(:out,Marginalisation) (m_in::Categorical, q_in::Categorical, q_A::Union{MatrixDirichlet,PointMass}, m_A::Any,meta::ObservedBetheMeta) = begin
     x = meta.δ
     return Dirichlet(x .+ 1)
 end
