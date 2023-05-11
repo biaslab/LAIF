@@ -3,7 +3,8 @@ export ContinuousMatrixvariateLogPdf
 
 using Distributions
 using ReactiveMP
-#
+import Distributions.rand
+import StatsFuns: gammainvcdf
 import DomainSets
 using ReactiveMP: AbstractContinuousGenericLogPdf
 
@@ -49,22 +50,24 @@ function is_typeof_equal(::ContinuousMatrixvariateLogPdf{D, F1}, ::ContinuousMat
     return true
 end
 
-# Draw sample from a Matrixvariate Dirichlet distribution with independent rows
-# TODO: Find a way to not create a bunch of intermediate Dirichlet distributions
-import Distributions.rand
 function rand(dist::MatrixDirichlet)
-    α = clamp.(dist.a,tiny,Inf)
-    # Sample from rowwise independent Dirichlet distributions and replace NaN's with 0.0.
+    #α = clamp.(dist.a,tiny,Inf)
     # We replace NaN's to allow for rows of 0's which are common in AIF modelling
-    replace!(reduce(hcat, Distributions.rand.(Dirichlet.(eachrow(α))))', NaN => 0.0)
+#    replace!(reduce(hcat, Distributions.rand.(Dirichlet.(eachrow(α))))', NaN => 0.0)
+    sample = clamp.(gammainvcdf.(dist.a,1.0, rand(size(dist.a)...)), tiny,Inf)
+    sample ./ sum(sample, dims=1)
+end
+
+function rand(dist::MatrixDirichlet, n::Int)
+    [rand(dist) for i in 1:n]
 end
 
 
 # We need a product of MatrixVariate Logpdf's and MatrixDirichlet to compute the marginal over the transition matrix. We approximate it using EVMP (Add citation to Semihs paper)
 # TODO: Doublecheck with Semihs paper that this should really be a samplelist. Also make number of samples user specified somehow?
 # TODO: SampleList requires 1D samples. Find a way to square that circle. In the meantime, replaced with MatrixDirichlet directly
-import Base: prod
 
+import Base: prod
 prod(::ProdAnalytical, left::MatrixDirichlet{Float64, Matrix{Float64}}, right::ContinuousMatrixvariateLogPdf{FullSpace{Float64}}) = begin
     _logpdf = right.logpdf
 

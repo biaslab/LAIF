@@ -51,14 +51,20 @@ struct DiscreteLAIF end
 @node DiscreteLAIF Stochastic [out,in, A]
 
 ### Unobserved PSubstitution
+
+# Compute the h vector
 _h(A) = -diag(A' * ReactiveMP.clamplog.(A))
+mean_h(A) = mean( _h.(rand(A,50)))
+
+
 # GFE Energy
 @average_energy DiscreteLAIF (q_out::Union{Dirichlet,PointMass}, q_in::Categorical, q_A::Union{PointMass,MatrixDirichlet},meta::PSubstitutionMeta) = begin
     s = probvec(q_in)
     A = mean(q_A)
     c = mean(q_out)
 
-    -s' * diag(A' * safelog.(A)) + (A*s)'*(safelog.(A*s) .- safelog.(c))
+    #-s' * diag(A' * safelog.(A)) + (A*s)'*(safelog.(A*s) .- safelog.(c))
+    -s' * -mean_h(q_A) + (A*s)'*(safelog.(A*s) .- safelog.(c))
 end
 
 
@@ -88,7 +94,8 @@ end
     C = mean(q_out)
 
     # Newton iterations for stability
-    g(s) = s - softmax(diag(A'*safelog.(A)) + A'*safelog.(C) - A'*safelog.(A*s) + safelog.(d))
+    #g(s) = s - softmax(diag(A'*safelog.(A)) + A'*safelog.(C) - A'*safelog.(A*s) + safelog.(d))
+    g(s) = s - softmax( -mean_h(q_A) + A'*safelog.(C) - A'*safelog.(A*s) + safelog.(d))
 
     s_k = deepcopy(s)
     for i in 1:20 # TODO make this user specified
