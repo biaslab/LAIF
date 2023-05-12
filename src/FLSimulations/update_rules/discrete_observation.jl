@@ -31,11 +31,11 @@ function ruleVBDiscreteObservationGeneralizedS(
 
     d = msg_s.dist.params[:p]
     s_0 = unsafeMean(marg_s)
-    A = unsafeMean(marg_A)
+    (A, amb_A) = unsafeMeanAmb(marg_A)
     log_c = unsafeLogMean(marg_c)
 
     # Root-finding problem for marginal statistics
-    g(s) = s - softmax(diag(A'*safelog.(A)) + A'*log_c - A'*safelog.(A*s) + safelog.(d))
+    g(s) = s - softmax(-amb_A + A'*log_c - A'*safelog.(A*s) + safelog.(d))
 
     s_k = deepcopy(s_0)
     for k=1:n_iterations
@@ -154,7 +154,7 @@ function ruleVBDiscreteObservationGeneralizedA(
     A = unsafeMean(marg_A)
     log_c = unsafeLogMean(marg_c)
 
-    log_mu_A(Z) = s'*diag(Z'*safelog.(Z)) + (Z*s)'*log_c - (Z*s)'*safelog.(A*s)
+    log_mu_A(Z) = -s'*amb(Z) + (Z*s)'*log_c - (Z*s)'*safelog.(A*s)
 
     Message(MatrixVariate, Function, log_pdf=log_mu_A) # Returns Function message
 end

@@ -1,15 +1,24 @@
 function constructPriors()
     eps = 0.1
     
-    # Strong prior on position 1
+    # Position 1 surely does not offer disambiguation
     A_0_1 = [10.0 10.0;
              10.0 10.0;
              eps  eps;
              eps  eps]
 
+    # But the other positions might
+    A_0_X = [1.0  eps;
+             eps  1.0;
+             eps  eps;
+             eps  eps]
+    
     A_0 = eps*ones(16, 8) # Vague prior on everything else
 
     A_0[1:4, 1:2] = A_0_1
+    A_0[5:8, 3:4] = A_0_X
+    A_0[9:12, 5:6] = A_0_X
+    A_0[13:16, 7:8] = A_0_X
 
     # Agent knows it starts at position 1
     D_0 = zeros(8)

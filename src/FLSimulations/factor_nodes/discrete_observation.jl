@@ -68,10 +68,10 @@ function averageEnergy(::Type{DiscreteObservation{Generalized}},
                        marg_c::Distribution)
 
     s = unsafeMean(marg_s)
-    A = unsafeMean(marg_A)
+    (A, amb_A) = unsafeMeanAmb(marg_A)
     log_c = unsafeLogMean(marg_c)
 
-    -s'*diag(A'*safelog.(A)) - (A*s)'*log_c # + (A*s)'*safelog.(A*s) # Entropy term is included by algorithm
+    s'*amb_A - (A*s)'*log_c # + (A*s)'*safelog.(A*s) # Entropy term is included by algorithm
 end
 
 function averageEnergy(::Type{DiscreteObservation{Bethe}},

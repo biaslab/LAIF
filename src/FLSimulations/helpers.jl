@@ -1,5 +1,5 @@
 using StatsFuns: gammainvcdf, loggamma
-import ForneyLab: ruleSPEqualityDirichlet, sample, logPdf, sampleWeightsAndEntropy, sample, unsafeMean, unsafeLogMean, VariateType, differentialEntropy
+import ForneyLab: ruleSPEqualityDirichlet, sample, logPdf, sampleWeightsAndEntropy, sample, unsafeMean, unsafeLogMean, VariateType, differentialEntropy, softmax, tiny
 
 differentialEntropy(::Distribution{<:VariateType, PointMass}) = 0.0 # Define entropy of pointmass as zero
 
@@ -23,7 +23,7 @@ ruleSPEqualityDirichlet(msg_1::Nothing, msg_2::Message{<:Function}, msg_3::Messa
 
 # Edit number of default samples
 function sampleWeightsAndEntropy(x::Distribution, y::Distribution{<:VariateType, <:Function})
-    n_samples = 10 # 100 # Number of samples is fixed
+    n_samples = 10 # Number of samples is fixed
     samples = sample(x, n_samples)
 
     # Apply log-pdf functions to the samples
@@ -50,6 +50,9 @@ end
 # Helper function to prevent log of 0
 safelog(x) = log(clamp(x,tiny,Inf))
 
+# Ambiguity weight vector
+amb(A) = -diag(A'*safelog.(A))
+
 function sample(dist::Distribution{MatrixVariate, Dirichlet})
     A = dist.params[:a]
     U = rand(size(A)...)
@@ -66,7 +69,15 @@ function unsafeLogMean(dist::Distribution{MatrixVariate, SampleList})
     return sum
 end
 
-import ForneyLab: softmax, tiny
+unsafeMeanAmb(dist::Distribution{MatrixVariate, PointMass}) = (dist.params[:m], amb(dist.params[:m]))
+
+function unsafeMeanAmb(dist::Distribution{MatrixVariate, Dirichlet})
+    n_samples = 10 # Number of samples is fixed
+    s = sample(dist, n_samples)
+    (sum(s)./n_samples, sum(amb.(s))./n_samples)
+end
+
+unsafeMeanAmb(dist::Distribution{MatrixVariate, SampleList}) = (sum(dist.params[:s].*dist.params[:w]), sum(amb.(dist.params[:s]).*dist.params[:w]))
 
 function softmax(v::Vector)
     r = v .- maximum(v)
