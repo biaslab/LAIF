@@ -20,13 +20,11 @@ function default_point_mass_form_constraint_optimizer(
 end
 
 
-#include("tm_back.jl");
 include("transition_mixture/transition_mixture.jl");
 include("transition_mixture/marginals.jl");
 include("transition_mixture/in.jl");
 include("transition_mixture/out.jl");
 include("transition_mixture/switch.jl");
-#include("DiscreteLAIF.jl");
 include("helpers.jl");
 
 @model function t_maze(A,D,B1,B2,B3,B4,T)
