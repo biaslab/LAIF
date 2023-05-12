@@ -40,11 +40,16 @@ include("helpers.jl");
     for t in 1:T
         switch[t] ~ Categorical(fill(1. /4. ,4))
 	z[t] ~ TransitionMixture(z_prev,switch[t], B1,B2,B3,B4)
-        x[t] ~ DiscreteLAIF(z[t], A) where {q = MeanField(), pipeline = GFEPipeline((2,),vague(Categorical,8))}
+        x[t] ~ DiscreteLAIF(z[t], A) where {q = MeanField(),
+                                            pipeline = GFEPipeline((2,3), vague(Categorical,8)
+                                                                   #(Nothing,vague(Categorical,8),
+                                                                   # vague(Categorical,8)
+                                                                   #)
+                                                                  )
+                                           }
         z_prev = z[t]
     end
 end;
-
 
 
 
@@ -57,7 +62,7 @@ end
     DiscreteLAIF(x,z) -> PSubstitutionMeta()
 end
 
-T =2;# 100_000;
+T = 2;#100_000;
 initmarginals = (
                  z = [Categorical(fill(1. /8. ,8)) for t in 1:T],
                 );
@@ -104,9 +109,10 @@ result = inference(model = t_maze(A,D,B[1],B[2],B[3],B[4],T),
                    meta= t_maze_meta(),
                    free_energy = true,
 #                   constraints=pointmass_q(),
-                   iterations=50,
-                   #options=(limit_stack_depth=500,)
-                   )
+                   iterations=5,
+                  # options=(limit_stack_depth=500,)
+                  )
+
 
 # BEHOLD!!!!
 probvec.(result.posteriors[:switch][end][1])
@@ -118,3 +124,4 @@ probvec.(result.posteriors[:switch][end][2])
 #
 #probvec(result.posteriors[:switch][end][1])
 #probvec(result.posteriors[:switch][end][2])
+#
