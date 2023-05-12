@@ -1,4 +1,0 @@
-q_i(x_i) is also in F. Therefore we can use Lemma 2 from ismails paper - since F also has the entropy discounting terms
-Given that, I need to show 2 things:
-    1. That the lagrange multiplier is actually a message
-    2. That iterating the messages converges to a stationary point
