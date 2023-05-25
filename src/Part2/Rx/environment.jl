@@ -84,7 +84,7 @@ function initializeWorld(A, B, C, D, rs)
        z_0 = zeros(8)
        z_0[1:2] = rs[s]
        z_t_min = z_0
-       o_t = A*z_0
+       x_t = A*z_0
 
        return Int64(r'*[2, 3]) # Hidden reward position
     end
@@ -100,13 +100,19 @@ function initializeWorld(A, B, C, D, rs)
     z_t_min = z_0
     function execute(a_t::Int64)
         z_t = B[a_t]*z_t_min # State transition
-        o_t = A*z_t # Observation
+        x_t = A*z_t # Observation probabilities
 
         z_t_min = z_t # Reset state for next step
     end
 
-    o_t = A*z_0
-    observe() = sample(Distribution(Univariate, Categorical, p=o_t))
+    x_t = A*z_0
+    function observe()
+        s = rand(Categorical(x_t))
+        o_t = zeros(16)
+        o_t[s] = 1.0
+
+        return o_t # One-hot observation
+    end
 
     return (reset, execute, observe)
 end

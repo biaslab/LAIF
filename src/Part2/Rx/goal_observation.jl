@@ -19,13 +19,13 @@ struct GoalObservation end
 struct BetheMeta{P} # Meta parameterized by x type for rule overloading
     x::P # Pointmass value for observation
 end
-BetheMeta() = BetheMeta(nothing) # Absent observation indicated by nothing
+BetheMeta() = BetheMeta(missing) # Absent observation
 
 struct GeneralizedMeta{P}
     x::P # Pointmass value for observation
     newton_iterations::Int64
 end
-GeneralizedMeta() = GeneralizedMeta(nothing, 20)
+GeneralizedMeta() = GeneralizedMeta(missing, 20)
 GeneralizedMeta(point) = GeneralizedMeta(point, 20)
 
 # Pipelines
@@ -71,7 +71,7 @@ end
 @rule GoalObservation(:c, Marginalisation) (q_c::Union{Dirichlet, PointMass},
                                             q_z::Categorical, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
-                                            meta::BetheMeta{Nothing}) = begin
+                                            meta::BetheMeta{Missing}) = begin
     log_c = mean(log, q_c)
     z = probvec(q_z)
     log_A = mean(log, q_A)
@@ -85,7 +85,7 @@ end
 @rule GoalObservation(:z, Marginalisation) (q_c::Union{Dirichlet, PointMass},
                                             q_z::Categorical, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
-                                            meta::BetheMeta{Nothing}) = begin
+                                            meta::BetheMeta{Missing}) = begin
     log_c = mean(log, q_c)
     z = probvec(q_z)
     log_A = mean(log, q_A)
@@ -99,7 +99,7 @@ end
 @rule GoalObservation(:A, Marginalisation) (q_c::Union{Dirichlet, PointMass},
                                             q_z::Categorical, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
-                                            meta::BetheMeta{Nothing}) = begin
+                                            meta::BetheMeta{Missing}) = begin
     log_c = mean(log, q_c)
     z = probvec(q_z)
     log_A = mean(log, q_A)
@@ -113,7 +113,7 @@ end
 @average_energy GoalObservation (q_c::Union{Dirichlet, PointMass}, 
                                  q_z::Categorical, 
                                  q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
-                                 meta::BetheMeta{Nothing}) = begin
+                                 meta::BetheMeta{Missing}) = begin
     log_c = mean(log, q_c)
     z = probvec(q_z)
     log_A = mean(log, q_A)
@@ -172,7 +172,7 @@ end
 
 @rule GoalObservation(:c, Marginalisation) (q_z::Categorical, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
-                                            meta::GeneralizedMeta{Nothing}) = begin
+                                            meta::GeneralizedMeta{Missing}) = begin
     z = probvec(q_z)
     A = mean(q_A)
 
@@ -183,7 +183,7 @@ end
                                             q_c::Union{Dirichlet, PointMass},
                                             q_z::Categorical,
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
-                                            meta::GeneralizedMeta{Nothing}) = begin
+                                            meta::GeneralizedMeta{Missing}) = begin
     d = probvec(m_z)
     log_c = mean(log, q_c)
     z_0 = probvec(q_z)
@@ -206,7 +206,7 @@ end
 @rule GoalObservation(:A, Marginalisation) (q_c::Union{Dirichlet, PointMass},
                                             q_z::Categorical, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass},
-                                            meta::GeneralizedMeta{Nothing}) = begin
+                                            meta::GeneralizedMeta{Missing}) = begin
     log_c = mean(log, q_c)
     z = probvec(q_z)
     A_bar = mean(q_A)                                            
@@ -219,7 +219,7 @@ end
 @average_energy GoalObservation (q_c::Union{Dirichlet, PointMass}, 
                                  q_z::Categorical, 
                                  q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
-                                 meta::GeneralizedMeta{Nothing}) = begin
+                                 meta::GeneralizedMeta{Missing}) = begin
     log_c = mean(log, q_c)
     z = probvec(q_z)
     (A, h_A) = mean_h(q_A)

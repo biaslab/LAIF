@@ -51,7 +51,9 @@ function __approximate(constraint::SampleListFormConstraint{N, R, S, M}, left, r
     return approximate_prod_with_sample_list(constraint.rng, constraint.method, left, right, N)
 end
 
-eltype(::GenericLogPdfVectorisedProduct) = Float64 # This is a hack
+# These are hacks to make _rand! work with matrix variate logpfds
+eltype(::GenericLogPdfVectorisedProduct) = Float64
+eltype(::ContinuousMatrixvariateLogPdf) = Float64
 
 function mean_h(d::SampleList)
     s = get_samples(d)

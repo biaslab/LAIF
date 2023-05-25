@@ -28,79 +28,74 @@ function constructPriors()
 end
 
 function initializeAgent(A_0, B, C, D_0)
-    n_its = 50 # Iterations of variational algorithm
-
+    iterations = 50 # Iterations of variational algorithm
     A_s = deepcopy(A_0)
     D_s = deepcopy(D_0)
     function infer(t::Int64, a::Vector, o::Vector)
         # Define possible policies
-        G = Matrix{Union{Float64, Missing}}(undef, 4, 4)
-        if t == 1
-            pols = [(1,1), (1,2), (1,3), (1,4), (2,1), (3,1), (4,1), (4,2), (4,3), (4,4)]
-        elseif t == 2
-            a1 = a[1] # Register first move
-            if a1 in [2, 3]
+        G = Matrix{Union{Float64, Missing}}(missing, 4, 4)
+        if t === 1
+                pols = [(1,1), (1,2), (1,3), (1,4), (2,1), (3,1), (4,1), (4,2), (4,3), (4,4)]
+        elseif t === 2
+                a1 = a[1] # Register first move
+                if a1 in [2, 3]
                 pols = [(a1,1)] # Mandatory move to 1
-            else
+                else
                 pols = [(a1,1), (a1,2), (a1,3), (a1,4)]
+                end
+        elseif t === 3
+                a1 = a[1] # Register both moves
+                a2 = a[2]
+                pols = [(a1, a2)]
+        end
+    
+        # Define (un)observed data for meta objects
+        x = Vector{Union{Vector{Float64}, Missing}}(missing, 2)
+        for k=1:2
+            if isassigned(o, k) # Observed datapoint
+                x[k] = o[k]
             end
-        elseif t == 3
-            a1 = a[1] # Register both moves
-            a2 = a[2]
-            pols = [(a1, a2)]
         end
-
+    
+        # Define model
+        model = t_maze(A_s, D_s, x)
+    
+        # Define constraints
+        constraints = structured(t!==3) # No sampling approximation for t=3
+    
         for (i, j) in pols
-            # data = Dict(:u   => [B[i], B[j]],
-            #             :A_s => A_s,
-            #             :C   => C,
-            #             :D_s => D_s)
-
-            # marginals = Dict{Symbol, ProbabilityDistribution}(
-            #     :z_0 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
-            #     :z_1 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
-            #     :z_2 => ProbabilityDistribution(Univariate, Categorical, p=asym(8)),
-            #     :A => ProbabilityDistribution(MatrixVariate, Dirichlet, a=asym(A_s)))
+            data = (u = [B[i], B[j]],
+                    c = [C, C])
+    
+            initmarginals = (A   = MatrixDirichlet(asym(A_s)),
+                             z_0 = Categorical(asym(8)),
+                             z   = [Categorical(asym(8)),
+                                    Categorical(asym(8))])
+    
+            res = inference(model         = model,
+                            constraints   = constraints, 
+                            data          = data,
+                            initmarginals = initmarginals,
+                            iterations    = iterations,
+                            free_energy   = true)
             
-            # # Define (un)observed marginals
-            # for k=1:2
-            #     if isassigned(o, k)
-            #         # Observed
-            #         marginals[:y_*k] = Distribution(Multivariate, PointMass, m=o[k])
-            #     else
-            #         # Unobserved
-            #         marginals[:y_*k] = Distribution(Univariate, Categorical, p=asym(16))
-            #     end
-            # end
-
-            # messages = initX()
-                                    
-            # Gis = zeros(n_its)
-            # for i=1:n_its
-            #     stepX!(data, marginals, messages)
-            #     stepA!(data, marginals)
-            #     stepY!(data, marginals)
-            #     Gis[i] = freeEnergy(data, marginals)
-            # end
-
-            # G[i, j] = mean(Gis[10:n_its])./log(2) # Average to smooth fluctuations and convert to bits
-            # if t == 3 # Update posterior statistics after learning
-            #     A_s = deepcopy(marginals[:A].params[:a])
-            # end
+            G[i, j] = mean(res.free_energy[10:iterations])./log(2) # Average to smooth fluctuations and convert to bits
+            if t === 3 # Return posterior statistics after learning
+                A_s = res.posteriors[:A][end].a
+            end
         end
-
+    
         return (G, A_s)
     end
-
+    
     function act(t, G)
         # We include policy selection in the act function for clearer code; procedurally, policy selection belongs in the plan step
         idx = findall((!).(ismissing.(G))) # Find coordinates of non-missing entries
         Gvec = G[idx] # Convert to vector of valid entries
-        p = softmax(-100.0*Gvec)
-        s = sample(ProbabilityDistribution(Categorical, p=p)) # Sample a one-hot representation
-        c = first(idx[s.==1.0]) # Select coordinate (policy) by sample
+        p = softmax(-10.0*Gvec) # Sharpen for minimum selection
+        pol = rand(Categorical(p)) # Select a policy
         
-        return c[t] # Return current action
+        return idx[pol][t] # Select current action from policy
     end
 
     return (infer, act)
