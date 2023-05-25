@@ -61,7 +61,7 @@ function initializeAgent(A_0, B, C, D_0)
         model = t_maze(A_s, D_s, x)
     
         # Define constraints
-        constraints = structured(t!==3) # No sampling approximation for t=3
+        constraints = structured(t<3) # Sampling approximation for t<3
     
         for (i, j) in pols
             data = (u = [B[i], B[j]],
