@@ -31,3 +31,14 @@ struct TransitionMixture end
 
     sum(-tr.(transpose.(eachslice(B,dims=3)) .* eachslice(log_A_bar,dims=3)))
 end
+
+# Used when input state is clamped
+@average_energy TransitionMixture (q_out_z::ContingencyTensor,q_in::PointMass, q_B1::PointMass, q_B2::PointMass, q_B3::PointMass, q_B4::PointMass) = begin
+
+    # Need to make this generic
+    log_A_bar = [mean(ReactiveMP.clamplog,q_B1);;; mean(ReactiveMP.clamplog,q_B2);;; mean(ReactiveMP.clamplog,q_B3);;; mean(ReactiveMP.clamplog,q_B4)]
+
+    B = mean(q_out_z)
+
+    sum(-tr.(transpose.(eachslice(B,dims=3)) .* eachslice(log_A_bar,dims=3)))
+end

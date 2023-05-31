@@ -21,12 +21,12 @@ end
     z = randomvar(T)
 
     z_prev = z_0
-    A ~ MatrixDirichlet(θ_A)
+   # A ~ MatrixDirichlet(θ_A)
 
     for t in 1:T
         z[t] ~ Transition(z_prev,B[t])
         # We use the pipeline to only initialise the messages we need.
-        x[t] ~ DiscreteLAIF(z[t], A) where {q = MeanField(), pipeline = GFEPipeline((2,3), (nothing, vague(Categorical,8), nothing)) }
+        x[t] ~ DiscreteLAIF(z[t], θ_A) where {q = MeanField(), pipeline = GFEPipeline((2,), (nothing, vague(Categorical,8) )) }
         z_prev = z[t]
     end
     return z, z_0
@@ -41,18 +41,19 @@ end
 
 
 T = 2
-its=50
+its=10
 # A has epsilons instead of 0's. Necessary because 0's are outside the domain of allowed parameters
+
 A,B,C,D = constructABCD(0.90,ones(T)*2,T);
 
 initmarginals = (
                  z = [Categorical(fill(1/8,8)) for t in 1:T],
                  z_0 = [Categorical(fill(1/8,8))],
-                 A = MatrixDirichlet(A),
+#                 A = MatrixDirichlet(A),
                 );
 
 
-F = zeros(4,4);
+F = zeros(4,4, its);
 
 for i in 1:4
     for j in 1:4
@@ -63,7 +64,10 @@ for i in 1:4
                            meta = t_maze_meta(),
                            free_energy=true,
                            iterations = its)
-        F[i,j] = mean(result.free_energy[10:end]) ./ log(2)
+        #F[i,j] = mean(result.free_energy[10:end]) ./ log(2)
+        F[i,j, :] = result.free_energy ./ log(2)
     end
 end
-F
+using Plots, UnicodePlots
+unicodeplots()
+plot(F[2,3,:])

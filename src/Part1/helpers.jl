@@ -5,10 +5,10 @@ function softmax(x::Vector)
     exp.(r) ./ sum(exp.(r))
 end
 
-function asym(n=Int64)
-    p = ones(n) .+ 1e-3* rand(n)
-    p ./ sum(p)
-end
+
+# Alias for safe logarithm
+const safelog = ReactiveMP.clamplog
+
 
 # Stolen from the Epistemic Value paper
 function constructABCD(α::Float64, Cs,T)

@@ -52,7 +52,7 @@ struct DiscreteLAIF end
 
 # Compute the h vector
 _h(A) = -diag(A' * ReactiveMP.clamplog.(A))
-mean_h(A) = mean( _h.(rand(A,50)))
+mean_h(A) = mean( _h.(rand(A,10)))
 
 ### Unobserved PSubstitution
 # GFE Energy
