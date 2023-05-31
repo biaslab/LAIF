@@ -59,8 +59,8 @@ end
     GoalObservation(c,z) -> GeneralizedMeta()
 end
 
-T =10000;
-its = 20;
+T =2;
+its = 10;
 initmarginals = (
 #                 z_0 = Categorical(fill(1. /8. ,8)),
                  z = [Categorical(fill(1. /8. ,8)) for t in 1:T],
@@ -68,7 +68,7 @@ initmarginals = (
 
 A,B,C,D = constructABCD(0.9,[2.0 for t in 1:T],T);
 
-@btime result = inference(model = t_maze(A,D,B[1],B[2],B[3],B[4],T),
+result = inference(model = t_maze(A,D,B[1],B[2],B[3],B[4],T),
                    data= (c = C,),
                    initmarginals = initmarginals,
                    meta= t_maze_meta(),

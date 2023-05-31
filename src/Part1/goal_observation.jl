@@ -54,11 +54,6 @@ function message_dependencies(pipeline::GeneralizedPipeline, nodeinterfaces, nod
     end
 end
 
-#function ReactiveMP.marginal_dependencies(pipeline::GeneralizedPipeline, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
-#    # For marginals we require marginal on the same edges as in the provided indices
-#    require_marginal = ReactiveMP.RequireMarginalFunctionalDependencies(pipeline.indices, map(_ -> nothing, pipeline.indices))
-#    return ReactiveMP.marginal_dependencies(require_marginal, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
-#end
 
 # Generalized update rule for state requires inbound marginal
 function marginal_dependencies(::GeneralizedPipeline, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
