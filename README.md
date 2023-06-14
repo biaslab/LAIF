@@ -1,2 +1,36 @@
-# EpistemicMessagePassing
-Experiments with deriving epistemics aware message passing algos
+This repository contains the source code for the simulations performed in Part I and II of the "Realising Synthetic Active Inference Agents" paper series. Simulations are performed with Jupyter Notebook, Julia and RxInfer.
+
+# Install Julia
+In order to install the Julia language (v1.8 or higher), follow the platform-specific instructions at https://julialang.org/downloads/
+
+# Install Jupyter Notebook
+Jupyter notebook is a framework for running Julia scripts (among other languages). It is well-suited for showing demo applications and interactive experimentation. In order to install Jupyter Notebook, follow the instructions at https://jupyter.readthedocs.io/en/latest/install.html
+
+# Install required packages
+The simulation notebooks require several external packages. To install them, open Julia
+```
+$ julia
+```
+and enter the package prompt by typing a closing bracket
+```
+julia> ]
+```
+Next, activate the virtual environment
+```
+(v1.8) pkg> activate .
+```
+and instantiate the required packages
+```
+(SAIF) pkg> instantiate
+```
+This will download and install the required packages in the virtual environment named SAIF.
+
+# Run the demos
+Exit Julia, navigate to the root directory and start a Jupyter server
+```
+~/SAIF$ jupyter notebook
+```
+A browser window will open, and you can select the demo you wish to run.
+
+# License
+MIT License, Copyright (c) 2023 BIASlab http://biaslab.org
