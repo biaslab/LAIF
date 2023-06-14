@@ -35,18 +35,18 @@ function initializeAgent(A_0, B, C, D_0)
         # Define possible policies
         G = Matrix{Union{Float64, Missing}}(missing, 4, 4)
         if t === 1
-                pols = [(1,1), (1,2), (1,3), (1,4), (2,1), (3,1), (4,1), (4,2), (4,3), (4,4)]
+            pols = [(1,1), (1,2), (1,3), (1,4), (2,1), (3,1), (4,1), (4,2), (4,3), (4,4)]
         elseif t === 2
-                a1 = a[1] # Register first move
-                if a1 in [2, 3]
+            a1 = a[1] # Register first move
+            if a1 in [2, 3]
                 pols = [(a1,1)] # Mandatory move to 1
-                else
+            else
                 pols = [(a1,1), (a1,2), (a1,3), (a1,4)]
-                end
+            end
         elseif t === 3
-                a1 = a[1] # Register both moves
-                a2 = a[2]
-                pols = [(a1, a2)]
+            a1 = a[1] # Register both moves
+            a2 = a[2]
+            pols = [(a1, a2)]
         end
     
         # Define (un)observed data for meta objects
