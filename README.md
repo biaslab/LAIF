@@ -21,14 +21,14 @@ Next, activate the virtual environment
 ```
 and instantiate the required packages
 ```
-(SAIF) pkg> instantiate
+(LAIF) pkg> instantiate
 ```
-This will download and install the required packages in the virtual environment named SAIF.
+This will download and install the required packages in the virtual environment named LAIF.
 
 # Run the demos
 Exit Julia, navigate to the root directory and start a Jupyter server
 ```
-~/SAIF$ jupyter notebook
+~/LAIF$ jupyter notebook
 ```
 A browser window will open, and you can select the demo you wish to run.
 
