@@ -106,3 +106,17 @@ function mean_h(d::MatrixDirichlet)
 
     return (sum(s)./n_samples, sum(h.(s))./n_samples)
 end
+
+
+#-----------
+# Transition
+#-----------
+
+@rule Transition(:out, Marginalisation) (q_in::PointMass, q_a::Any) = begin
+    a = clamp.(exp.(mean(log, q_a) * probvec(q_in)), tiny, Inf)
+    return Categorical(a ./ sum(a))
+end
+
+@rule Transition(:a, Marginalisation) (q_out::Any, q_in::PointMass) = begin
+    return MatrixDirichlet(collect(probvec(q_out)) * probvec(q_in)' .+ 1)
+end

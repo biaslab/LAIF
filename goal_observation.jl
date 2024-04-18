@@ -31,7 +31,10 @@ GeneralizedMeta(point) = GeneralizedMeta(point, 20)
 # Pipelines
 struct BethePipeline <: AbstractNodeFunctionalDependenciesPipeline end
 struct GeneralizedPipeline <: AbstractNodeFunctionalDependenciesPipeline
-    init_message::Categorical
+    init_message::Union{Bernoulli, Categorical}
+
+    GeneralizedPipeline() = new() # If state is clamped, then no inital message is required
+    GeneralizedPipeline(init_message::Union{Bernoulli, Categorical}) = new(init_message)
 end
 
 function message_dependencies(::BethePipeline, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
@@ -45,7 +48,7 @@ end
 
 # Generalized update rule for state requires inbound message
 function message_dependencies(pipeline::GeneralizedPipeline, nodeinterfaces, nodelocalmarginals, varcluster, cindex, iindex)
-    if iindex === 2 # Message towards state
+    if iindex === 2 && isdefined(pipeline, :init_message) # Message towards state
         input = ReactiveMP.messagein(nodeinterfaces[iindex])
         ReactiveMP.setmessage!(input, pipeline.init_message) # Predefine breaker message
         return (nodeinterfaces[iindex],) # Include inbound message on state
@@ -69,7 +72,7 @@ end
 #------------------------------
 
 @rule GoalObservation(:c, Marginalisation) (q_c::Union{Dirichlet, PointMass},
-                                            q_z::Categorical, 
+                                            q_z::Union{Bernoulli, Categorical, PointMass}, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                             meta::BetheMeta{Missing}) = begin
     log_c = mean(log, q_c)
@@ -83,7 +86,7 @@ end
 end
 
 @rule GoalObservation(:z, Marginalisation) (q_c::Union{Dirichlet, PointMass},
-                                            q_z::Categorical, 
+                                            q_z::Union{Bernoulli, Categorical}, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                             meta::BetheMeta{Missing}) = begin
     log_c = mean(log, q_c)
@@ -97,7 +100,7 @@ end
 end
 
 @rule GoalObservation(:A, Marginalisation) (q_c::Union{Dirichlet, PointMass},
-                                            q_z::Categorical, 
+                                            q_z::Union{Bernoulli, Categorical, PointMass}, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                             meta::BetheMeta{Missing}) = begin
     log_c = mean(log, q_c)
@@ -111,7 +114,7 @@ end
 end
 
 @average_energy GoalObservation (q_c::Union{Dirichlet, PointMass}, 
-                                 q_z::Categorical, 
+                                 q_z::Union{Bernoulli, Categorical, PointMass}, 
                                  q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                  meta::BetheMeta{Missing}) = begin
     log_c = mean(log, q_c)
@@ -130,14 +133,14 @@ end
 #----------------------------
 
 @rule GoalObservation(:c, Marginalisation) (q_c::Union{Dirichlet, PointMass}, # Unused
-                                            q_z::Categorical, 
+                                            q_z::Union{Bernoulli, Categorical, PointMass}, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                             meta::BetheMeta{<:AbstractVector}) = begin
     return Dirichlet(meta.x .+ 1)
 end
 
 @rule GoalObservation(:z, Marginalisation) (q_c::Union{Dirichlet, PointMass},
-                                            q_z::Categorical, # Unused
+                                            q_z::Union{Bernoulli, Categorical}, # Unused
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                             meta::BetheMeta{<:AbstractVector}) = begin
     log_A = mean(log, q_A)
@@ -146,7 +149,7 @@ end
 end
 
 @rule GoalObservation(:A, Marginalisation) (q_c::Union{Dirichlet, PointMass},
-                                            q_z::Categorical, 
+                                            q_z::Union{Bernoulli, Categorical, PointMass}, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, # Unused
                                             meta::BetheMeta{<:AbstractVector}) = begin
     z = probvec(q_z)
@@ -155,7 +158,7 @@ end
 end
 
 @average_energy GoalObservation (q_c::Union{Dirichlet, PointMass}, 
-                                 q_z::Categorical, 
+                                 q_z::Union{Bernoulli, Categorical, PointMass}, 
                                  q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                  meta::BetheMeta{<:AbstractVector}) = begin
     log_c = mean(log, q_c)
@@ -170,7 +173,7 @@ end
 # Unobserved Generalized Update Rules
 #------------------------------------
 
-@rule GoalObservation(:c, Marginalisation) (q_z::Categorical, 
+@rule GoalObservation(:c, Marginalisation) (q_z::Union{Bernoulli, Categorical, PointMass}, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                             meta::GeneralizedMeta{Missing}) = begin
     z = probvec(q_z)
@@ -179,9 +182,9 @@ end
     return Dirichlet(A*z .+ 1)
 end
 
-@rule GoalObservation(:z, Marginalisation) (m_z::Categorical,
+@rule GoalObservation(:z, Marginalisation) (m_z::Union{Bernoulli, Categorical},
                                             q_c::Union{Dirichlet, PointMass},
-                                            q_z::Categorical,
+                                            q_z::Union{Bernoulli, Categorical},
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                             meta::GeneralizedMeta{Missing}) = begin
     d = probvec(m_z)
@@ -204,7 +207,7 @@ end
 end
 
 @rule GoalObservation(:A, Marginalisation) (q_c::Union{Dirichlet, PointMass},
-                                            q_z::Categorical, 
+                                            q_z::Union{Bernoulli, Categorical, PointMass}, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass},
                                             meta::GeneralizedMeta{Missing}) = begin
     log_c = mean(log, q_c)
@@ -217,7 +220,7 @@ end
 end
 
 @average_energy GoalObservation (q_c::Union{Dirichlet, PointMass}, 
-                                 q_z::Categorical, 
+                                 q_z::Union{Bernoulli, Categorical, PointMass}, 
                                  q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                  meta::GeneralizedMeta{Missing}) = begin
     log_c = mean(log, q_c)
@@ -232,15 +235,15 @@ end
 # Observed Generalized Update Rules
 #----------------------------------
 
-@rule GoalObservation(:c, Marginalisation) (q_z::Categorical, # Unused
+@rule GoalObservation(:c, Marginalisation) (q_z::Union{Bernoulli, Categorical, PointMass}, # Unused
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, # Unused
                                             meta::GeneralizedMeta{<:AbstractVector}) = begin
     return Dirichlet(meta.x .+ 1)
 end
 
-@rule GoalObservation(:z, Marginalisation) (m_z::Categorical, # Unused
+@rule GoalObservation(:z, Marginalisation) (m_z::Union{Bernoulli, Categorical}, # Unused
                                             q_c::Union{Dirichlet, PointMass}, # Unused
-                                            q_z::Categorical, # Unused
+                                            q_z::Union{Bernoulli, Categorical}, # Unused
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                             meta::GeneralizedMeta{<:AbstractVector}) = begin
     log_A = mean(log, q_A)
@@ -249,7 +252,7 @@ end
 end
 
 @rule GoalObservation(:A, Marginalisation) (q_c::Union{Dirichlet, PointMass}, # Unused
-                                            q_z::Categorical, 
+                                            q_z::Union{Bernoulli, Categorical, PointMass}, 
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, # Unused
                                             meta::GeneralizedMeta{<:AbstractVector}) = begin
     z = probvec(q_z)
@@ -258,7 +261,7 @@ end
 end
 
 @average_energy GoalObservation (q_c::Union{Dirichlet, PointMass}, 
-                                 q_z::Categorical, 
+                                 q_z::Union{Bernoulli, Categorical, PointMass}, 
                                  q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                  meta::GeneralizedMeta{<:AbstractVector}) = begin
     log_c = mean(log, q_c)
