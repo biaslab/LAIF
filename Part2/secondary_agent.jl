@@ -1,4 +1,4 @@
-function initializeSecondaryAgent(B_0, C, αs)
+function initializeSecondaryAgent(B_0, αs)
     iterations = 50 # Iterations of variational algorithm
     L = length(αs)
 
@@ -20,21 +20,17 @@ function initializeSecondaryAgent(B_0, C, αs)
             u = zeros(L)
             u[i] = 1.0 # One-hot policy
 
-            # Observation matrix depends on offer
-            eps = 1e-4
-            #    CV  NC
-            A = [1-α eps; # RW
-                 α   1-eps] # NR
-
             # Define model
-            model = t_maze_secondary(A, B_s, x, u)
+            model = t_maze_secondary(B_s, x, u)
 
+            # Utility depends on offer
+            C = softmax([c*(1-α), -c*(1-α)])
+            
             data = (c = C,)
     
-            constraints = structured()
+            constraints = structured(t<2)
 
-            initmarginals = (B = MatrixDirichlet(asym(B_s)),
-                             z = vague(Categorical, 2))
+            initmarginals = (B = MatrixDirichlet(asym(B_s)),)
     
             res = inference(model         = model,
                             data          = data,
@@ -43,10 +39,9 @@ function initializeSecondaryAgent(B_0, C, αs)
                             iterations    = iterations,
                             free_energy   = true)
                         
-            # G[i] = mean(res.free_energy[10:iterations])./log(2) # Average to smooth fluctuations and convert to bits
-            G[i] = res.free_energy[end]/log(2) # Convert to bits
+            G[i] = mean(res.free_energy[10:iterations])./log(2) # Average to smooth fluctuations and convert to bits
+            # G[i] = res.free_energy[end]/log(2) # Convert to bits
             if t === 2 # Return posterior statistics after learning
-                println(round.(res.free_energy, digits=2))
                 B_s = res.posteriors[:B][end].a
             end
         end
