@@ -1,18 +1,30 @@
-# Secondary World offers a simplified representation of the primary agent
-function initializeSecondaryWorld(αs)
-    theta = 0.91 # Offer-acceptance threshold
-    function execute(a_s::Int64) # Determine acceptance of offer a_s
-        if αs[a_s] > theta
-            #       CV NC
-            x_s = [1, 0]
+function initializeSecondaryWorld()
+    # Secondary execute plays interaction of primary agent with environment
+    function execute_prime(s::Int64, a_prime::Int64)
+        as = Vector{Int64}(undef, 2) # Primary actions per time
+        os = Vector{Vector}(undef, 2) # Primary observations (one-hot) per time
+        reset(s, a_prime) 
+        for t=1:2
+              G_t = infer(t, as, os, a_prime)
+            as[t] = act(t, G_t)
+                    execute(as[t])
+            os[t] = observe()
+        end
+
+        a_s = deepcopy(as)
+    end
+
+    a_s = Vector{Int64}(undef, 2)
+    function observe_prime() # Accepts executed action sequence by primary agent
+        # Secondary agent observes CV if primary agent has tried to visit the cue position (NC otherwise)
+        if 4 in a_s # Offer is made when action to cue is proposed
+                  # CV   NC
+            return [1.0, 0.0]
         else
-            x_s = [0, 1]
+            return [0.0, 1.0]
         end
     end
 
-    #      CV NC
-    x_s = [0, 1]
-    observe() = x_s
-
-    return (execute, observe)
+    return (execute_prime, observe_prime)
 end
+;

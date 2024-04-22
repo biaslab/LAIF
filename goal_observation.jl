@@ -246,8 +246,7 @@ end
                                             q_z::Union{Bernoulli, Categorical}, # Unused
                                             q_A::Union{SampleList, MatrixDirichlet, PointMass}, 
                                             meta::GeneralizedMeta{<:AbstractVector}) = begin
-    log_A = mean(log, q_A)
-
+    log_A = clamp.(mean(log, q_A), -12, 12)
     return Categorical(softmax(log_A'*meta.x))
 end
 
@@ -266,7 +265,7 @@ end
                                  meta::GeneralizedMeta{<:AbstractVector}) = begin
     log_c = mean(log, q_c)
     z = probvec(q_z)
-    log_A = mean(log, q_A)
+    log_A = clamp.(mean(log, q_A), -12, 12)
 
     return -meta.x'*(log_A*z + log_c)
 end

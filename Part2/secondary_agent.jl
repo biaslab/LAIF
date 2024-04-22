@@ -1,9 +1,13 @@
-function initializeSecondaryAgent(B_0, αs)
+function constructSecondaryPriors()
+    eps = 0.1
+    B_0 = eps*ones(2, L)
+end
+
+function initializeSecondaryAgent(B_0)
     iterations = 50 # Iterations of variational algorithm
-    L = length(αs)
 
     B_s = deepcopy(B_0)
-    function infer(t::Int64, a::Union{Int64, Missing}, o::Union{Vector, Missing})
+    function infer_prime(t::Int64, a::Union{Int64, Missing}, o::Union{Vector, Missing})
         # Define possible policies
         G = Vector{Float64}(undef, L)
         if t === 1
@@ -24,7 +28,7 @@ function initializeSecondaryAgent(B_0, αs)
             model = t_maze_secondary(B_s, x, u)
 
             # Utility depends on offer
-            C = softmax([c*(1-α), -c*(1-α)])
+            C = softmax((1-α)*[c, -c])
             
             data = (c = C,)
     
@@ -49,12 +53,13 @@ function initializeSecondaryAgent(B_0, αs)
         return (G, B_s)
     end
 
-    function act(G)
+    function act_prime(G)
         p = softmax(-10.0*G) # Sharpen for minimum selection (fixed precision)
         pol = rand(Categorical(p)) # Select a policy
         
         return pol # Select from possible actions
     end
 
-    return (infer, act)
+    return (infer_prime, act_prime)
 end
+;
