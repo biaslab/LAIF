@@ -1,6 +1,6 @@
 function initializePrimaryAgent(B, C, D)
     iterations = 50 # Iterations of variational algorithm
-    function infer(t::Int64, a::Vector, o::Vector, a_prime::Int64)
+    function infer(t::Int64, a::Vector, o::Vector, a_prime::Int64) # Inference depends on offer by secondary agent
         # Define possible policies
         G = Matrix{Union{Float64, Missing}}(missing, 4, 4)
         if t === 1
@@ -27,7 +27,7 @@ function initializePrimaryAgent(B, C, D)
         end
     
         # Define model
-        (A_s, _, _, _) = constructPrimaryABCD(αs[a_prime], c) # Observation matrix depends on offer
+        A_s = constructPrimaryA(αs[a_prime]) # Offer is encoded by primary observation matrix
         model = t_maze_primary(A_s, D, x)
         
         for (i, j) in pols
@@ -51,7 +51,6 @@ function initializePrimaryAgent(B, C, D)
     end
     
     function act(t::Int64, G::Matrix)
-        # We include policy selection in the act function for clearer code; procedurally, policy selection belongs in the plan step
         idx = findall((!).(ismissing.(G))) # Find coordinates of non-missing entries
         Gvec = G[idx] # Convert to vector of valid entries
         p = softmax(-10.0*Gvec) # Sharpen for minimum selection

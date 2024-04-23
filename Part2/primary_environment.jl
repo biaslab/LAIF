@@ -1,6 +1,6 @@
 using Random
 
-function constructPrimaryABCD(α::Float64, c::Float64)
+function constructPrimaryA(α::Float64)
     # Observation model
     #      P1
     #      RL       RR
@@ -15,7 +15,7 @@ function constructPrimaryABCD(α::Float64, c::Float64)
     #      CV  NC   CV  NC
     A_2 = [0.0 0.0  0.0 0.0;
            0.0 0.0  0.0 0.0;
-           α   1.0  1-α 0.0;
+           α   1.0  1-α 0.0; # Without visiting the cue, all reward goes to the primary agent 
            1-α 0.0  α   1.0]
 
     #      P3
@@ -40,6 +40,10 @@ function constructPrimaryABCD(α::Float64, c::Float64)
     A[9:12, 9:12]   = A_3
     A[13:16, 13:16] = A_4
 
+    return A
+end
+
+function constructPrimaryBCD(c::Float64)
     # Transition model (with forced move back after reward-arm visit)
     B_1 = kron([1 1 1 1; # Row: can I move to 1?
                 0 0 0 0;
@@ -90,7 +94,7 @@ function constructPrimaryABCD(α::Float64, c::Float64)
     #    CV   NC   CV   NC   
     D = [0.0, 0.5, 0.0, 0.5,  0.0, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0, 0.0]
 
-    return (A, B, C, D)
+    return (B, C, D)
 end
 
 function generateGoalSequence(S::Int64)
@@ -114,11 +118,11 @@ function generateGoalSequence(seed::Int64, S::Int64)
     generateGoalSequence(S)
 end
 
-
+# The primary World defines the Markov blanket between the primary agent and its T-maze environment
 function initializePrimaryWorld(B, rs)
-    (A_s, _, _, _) = constructPrimaryABCD(0.9, c) # Initialize observation matrix
+    A_s = constructPrimaryA(0.9) # Initialize observation matrix
     function reset(s, a_prime)
-       (A_s, _, _, _) = constructPrimaryABCD(αs[a_prime], c) # Reward probability depends on offer
+       A_s = constructPrimaryA(αs[a_prime]) # Reward probability depends on offer 
 
        z_0 = zeros(16)
        z_0[1:4] = rs[s]
@@ -128,7 +132,10 @@ function initializePrimaryWorld(B, rs)
        return Int64(r'*[2, 2, 3, 3]) # Hidden reward position
     end
 
-    # Set initial reward position
+    # Set initial reward position (updated by reset)
+    #    P1
+    #    RL    RR
+    #    CV NC CV NC
     r = [0, 0, 0, 1]
 
     # Initial state

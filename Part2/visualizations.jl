@@ -204,3 +204,16 @@ function plotObservationStatistics(A::Matrix, A_0::Matrix; title="")
 
     plot(p1, p2, p3, p4, layout=grid(1,4,widths=[0.25,0.25,0.25,0.25]), size=(500,220), dpi=300, plot_title=title, plot_titlevspan=0.1)
 end
+
+function plotOffers(Gs)
+    heatmap(hcat(Gs...), 
+            c = cgrad(:grays, rev = true), 
+            yticks=(1:L, αs), 
+            xlabel="Simulation Trial (s)", 
+            ylabel="Offer (α)", 
+            dpi=300, 
+            size=(600,200),
+            left_margin=2Plots.mm,
+            bottom_margin=3Plots.mm)
+    scatter!(as, color=:white, label=false)
+end

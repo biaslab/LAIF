@@ -1,9 +1,12 @@
+# The secondary World defines the Markov blanket between the secondary and the primary agent 
 function initializeSecondaryWorld()
-    # Secondary execute plays interaction of primary agent with environment
+    # The secondary execute simulates the interaction of primary agent with its environment
     function execute_prime(s::Int64, a_prime::Int64)
         as = Vector{Int64}(undef, 2) # Primary actions per time
         os = Vector{Vector}(undef, 2) # Primary observations (one-hot) per time
-        reset(s, a_prime) 
+        reset(s, a_prime) # Reset primary agent for next trial
+        
+        # Simulate interaction of primary agent with T-maze
         for t=1:2
               G_t = infer(t, as, os, a_prime)
             as[t] = act(t, G_t)
@@ -11,11 +14,11 @@ function initializeSecondaryWorld()
             os[t] = observe()
         end
 
-        a_s = deepcopy(as)
+        a_s = deepcopy(as) # Register primary action sequence
     end
 
-    a_s = Vector{Int64}(undef, 2)
-    function observe_prime() # Accepts executed action sequence by primary agent
+    a_s = Vector{Int64}(undef, 2) # Predefine primary action sequence
+    function observe_prime() # Accepts action sequence of primary agent
         # Secondary agent observes CV if primary agent has tried to visit the cue position (NC otherwise)
         if 4 in a_s # Offer is made when action to cue is proposed
                   # CV   NC
