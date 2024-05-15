@@ -205,8 +205,8 @@ function plotObservationStatistics(A::Matrix, A_0::Matrix; title="")
     plot(p1, p2, p3, p4, layout=grid(1,4,widths=[0.25,0.25,0.25,0.25]), size=(500,220), dpi=300, plot_title=title, plot_titlevspan=0.1)
 end
 
-function plotOffers(Gs)
-    heatmap(hcat(Gs...), 
+function plotOffers(G_ps, a_ps, o_ps)
+    heatmap(hcat(G_ps...), 
             c = cgrad(:grays, rev = true), 
             yticks=(1:L, αs), 
             xlabel="Simulation Trial (s)", 
@@ -215,5 +215,79 @@ function plotOffers(Gs)
             size=(600,200),
             left_margin=2Plots.mm,
             bottom_margin=3Plots.mm)
-    scatter!(as, color=:white, label=false)
+
+    idx_cv = findall(first.(o_ps).==1.0)
+    idx_nc = findall(first.(o_ps).==0.0)
+    scatter!(a_ps, color=:white, label=false, markersize=5)
+    scatter!(idx_nc, a_ps[idx_nc], label=false, marker=:x, color=:black, markersize=3, markerstrokewidth=3)
+end
+
+function plotLearnedGoals(C_0, C, Gs, S)
+    G_fix = Matrix{Float64}(undef, 10, S)
+    for s=1:S
+        G_fix[1,s] = Gs[s][1][1,1]
+        G_fix[2,s] = Gs[s][1][1,2]
+        G_fix[3,s] = Gs[s][1][1,3]
+        G_fix[4,s] = Gs[s][1][1,4]
+
+        G_fix[5,s] = Gs[s][1][2,1]
+
+        G_fix[6,s] = Gs[s][1][3,1]
+
+        G_fix[7,s] = Gs[s][1][4,1]
+        G_fix[8,s] = Gs[s][1][4,2]
+        G_fix[9,s] = Gs[s][1][4,3]
+        G_fix[10,s] = Gs[s][1][4,4]
+    end
+
+    yticks = ["P1 CL", "P1 CR", "P1 RW", "P1 NR", 
+              "P2 CL", "P2 CR", "P2 RW", "P2 NR",
+              "P3 CL", "P3 CR", "P3 RW", "P3 NR",
+              "P4 CL", "P4 CR", "P4 RW", "P4 NR"]
+
+    idx1 = [13,14]
+    idx2 = [7,8,11,12]
+
+    clim = (0,6)
+
+    p1 = heatmap(hcat([C[1][idx1] .- C_0[1][idx1] for C in Cs]...), 
+                c      = cgrad(:grays, rev = true),
+                clim   = clim,
+                colorbar = false,
+                xticks = false,
+                #ylabel = "k=1", 
+                yflip  = true,
+                yticks = (1:2, yticks[idx1]),
+                title  = "Learned Goal Statistics")
+
+    p2 = heatmap(hcat([C[2][idx2] .- C_0[2][idx2] for C in Cs]...), 
+                c      = cgrad(:grays, rev = true),
+                clim   = clim,
+                colorbar = false,
+                xlabel = "Simulation Trial (s)", 
+                #ylabel = "k=2",
+                yflip  = true,
+                xticks = (1:S, 1:S),
+                yticks = (1:4, yticks[idx2]))
+
+    p3 = heatmap(G_fix, 
+                c      = cgrad(:grays, rev = true),
+                xlabel = "Simulation Trial (s)", 
+                #ylabel = "Policy",
+                yflip  = true,
+                xticks = (1:S, 1:S),
+                yticks = (1:10, ["(1,1)", "(1,2)", "(1,3)", "(1,4)", 
+                                "(2,1)", 
+                                "(3,1)", 
+                                "(4,1)", "(4,2)", "(4,3)", "(4,4)"]),
+                title  = "Policy GFE [bits]")
+
+    h2 = scatter([0,0], [0,1], 
+                zcolor = clim, clims=clim,
+                xlims=(1,1.1), xshowaxis=false, yshowaxis=false, 
+                label="", c=cgrad(:grays, rev = true), grid=false)
+
+    l = @layout [[a{0.33h}; b{0.66h}] c{0.01w} d{0.95h,0.55w}]
+
+    plot(p1, p2, h2, p3, layout=l, size=(700,280), dpi=300)
 end

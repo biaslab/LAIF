@@ -1,87 +1,83 @@
 using Random
 
+
 function constructPrimaryA(α::Float64)
     # Observation model
-    #      P1
-    #      RL       RR
-    #      CV  NC   CV  NC
-    A_1 = [0.5 0.5  0.5 0.5;
-           0.5 0.5  0.5 0.5;
-           0.0 0.0  0.0 0.0;
-           0.0 0.0  0.0 0.0]
+    A_1 = [0.5 0.5;
+           0.5 0.5;
+           0.0 0.0;
+           0.0 0.0]
 
-    #      P2
-    #      RL       RR
-    #      CV  NC   CV  NC
-    A_2 = [0.0 0.0  0.0 0.0;
-           0.0 0.0  0.0 0.0;
-           α   1.0  1-α 0.0; # Without visiting the cue, all reward goes to the primary agent 
-           1-α 0.0  α   1.0]
+    A_2 = [0.0 0.0;
+           0.0 0.0;
+           α   1-α;
+           1-α α  ]
 
-    #      P3
-    #      RL       RR
-    #      CV  NC   CV  NC
-    A_3 = [0.0 0.0  0.0 0.0;
-           0.0 0.0  0.0 0.0;
-           1-α 0.0  α   1.0;
-           α   1.0  1-α 0.0]
+    A_3_α = [0.0 0.0;
+             0.0 0.0;
+             1-α α  ;
+             α   1-α]
 
-    #      P4
-    #      RL       RR
-    #      CV  NC   CV  NC
-    A_4 = [1.0 1.0  0.0 0.0;
-           0.0 0.0  1.0 1.0;
-           0.0 0.0  0.0 0.0;
-           0.0 0.0  0.0 0.0]
+    A_3_1 = [0.0 0.0;
+             0.0 0.0;
+             0.0 1.0
+             1.0 0.0]
+
+    A_4 = [1.0 0.0;
+           0.0 1.0;
+           0.0 0.0;
+           0.0 0.0]
 
     A = zeros(16, 16)
-    A[1:4, 1:4]     = A_1
-    A[5:8, 5:8]     = A_2
-    A[9:12, 9:12]   = A_3
-    A[13:16, 13:16] = A_4
+    A[1:4, 1:2]     = A_1
+    A[5:8, 3:4]     = A_2
+    A[9:12, 5:6]    = A_3_α
+    A[13:16, 7:8]   = A_4
+    A[1:4, 9:10]    = A_1
+    A[5:8, 11:12]   = A_2
+    A[9:12, 13:14]  = A_3_1
+    A[13:16, 15:16] = A_4
 
     return A
 end
 
 function constructPrimaryBCD(c::Float64)
     # Transition model (with forced move back after reward-arm visit)
-    B_1 = kron([1 1 1 1; # Row: can I move to 1?
-                0 0 0 0;
-                0 0 0 0;
-                0 0 0 0], I(4))
+    B_1 = kron(I(2), [1 1 1 1; # Row: can I move to 1?
+                      0 0 0 0;
+                      0 0 0 0;
+                      0 0 0 0], I(2))
 
-    B_2 = kron([0 1 1 0; 
-                1 0 0 1; # Row: can I move to 2?
-                0 0 0 0;
-                0 0 0 0], I(4))
+    B_2 = kron(I(2), [0 1 1 0; 
+                      1 0 0 1; # Row: can I move to 2?
+                      0 0 0 0;
+                      0 0 0 0], I(2))
 
-    B_3 = kron([0 1 1 0;
-                0 0 0 0;
-                1 0 0 1; # Row: can I move to 3?
-                0 0 0 0], I(4))
+    B_3 = kron(I(2), [0 1 1 0;
+                      0 0 0 0;
+                      1 0 0 1; # Row: can I move to 3?
+                      0 0 0 0], I(2))
 
-    #      P1           P2 ...
-    #      RL    RR        
-    #      CV NC CV NC
-    B_4 = [0  0  0  0   1  0  0  0   1  0  0  0   0  0  0  0;
-           0  0  0  0   0  1  0  0   0  1  0  0   0  0  0  0;
-           0  0  0  0   0  0  1  0   0  0  1  0   0  0  0  0;
-           0  0  0  0   0  0  0  1   0  0  0  1   0  0  0  0;
-
-           0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0;
-           0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0;
-           0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0;
-           0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0;
-
-           0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0;
-           0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0;
-           0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0;
-           0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0;
-
-           1  1  0  0   0  0  0  0   0  0  0  0   1  1  0  0; # Move to World with visited cue
-           0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0;
-           0  0  1  1   0  0  0  0   0  0  0  0   0  0  1  1; # Move to World with visited cue
-           0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0]
+         # CV                       NC
+         # P1    P2    ...
+         # RL RR RL RR
+    B_4 = [0  0  1  0  1  0  0  0   0  0  0  0  0  0  0  0;
+           0  0  0  1  0  1  0  0   0  0  0  0  0  0  0  0;
+           0  0  0  0  0  0  0  0   0  0  0  0  0  0  0  0;
+           0  0  0  0  0  0  0  0   0  0  0  0  0  0  0  0;
+           0  0  0  0  0  0  0  0   0  0  0  0  0  0  0  0;
+           0  0  0  0  0  0  0  0   0  0  0  0  0  0  0  0;
+           1  0  0  0  0  0  1  0   1  0  0  0  0  0  1  0; # Move to world with visited cue
+           0  1  0  0  0  0  0  1   0  1  0  0  0  0  0  1;
+           
+           0  0  0  0  0  0  0  0   0  0  1  0  1  0  0  0;
+           0  0  0  0  0  0  0  0   0  0  0  1  0  1  0  0;
+           0  0  0  0  0  0  0  0   0  0  0  0  0  0  0  0;
+           0  0  0  0  0  0  0  0   0  0  0  0  0  0  0  0;
+           0  0  0  0  0  0  0  0   0  0  0  0  0  0  0  0;
+           0  0  0  0  0  0  0  0   0  0  0  0  0  0  0  0;
+           0  0  0  0  0  0  0  0   0  0  0  0  0  0  0  0;
+           0  0  0  0  0  0  0  0   0  0  0  0  0  0  0  0]
 
     B = [B_1, B_2, B_3, B_4]
 
@@ -89,10 +85,8 @@ function constructPrimaryBCD(c::Float64)
     C = softmax(kron(ones(4), [0.0, 0.0, c, -c]))
 
     # Initial state prior
-    #    P1                   P2 ...
-    #    RL        RR        
-    #    CV   NC   CV   NC   
-    D = [0.0, 0.5, 0.0, 0.5,  0.0, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0, 0.0]
+    #         CV   NC
+    D = kron([0.0, 1.0], [1.0, 0.0, 0.0, 0.0], [0.5, 0.5]) # Start in an NC state
 
     return (B, C, D)
 end
@@ -101,12 +95,9 @@ function generateGoalSequence(S::Int64)
     rs = Vector{Vector}(undef, S)
     for si=1:S
         if rand() > 0.5
-            #         P1
-            #         RL    RR
-            #         CV NC CV NC
-            rs[si] = [0, 0, 0, 1]
+            rs[si] = [0, 1]
         else
-            rs[si] = [0, 1, 0, 0]
+            rs[si] = [1, 0]
         end
     end
 
@@ -125,22 +116,19 @@ function initializePrimaryWorld(B, rs)
        A_s = constructPrimaryA(αs[a_prime]) # Reward probability depends on offer 
 
        z_0 = zeros(16)
-       z_0[1:4] = rs[s]
+       z_0[8:9] = rs[s]
        z_t_min = z_0
        x_t = A_s*z_0
 
-       return Int64(r'*[2, 2, 3, 3]) # Hidden reward position
+       return Int64(r'*[2, 3]) # Hidden reward position
     end
 
     # Set initial reward position (updated by reset)
-    #    P1
-    #    RL    RR
-    #    CV NC CV NC
-    r = [0, 0, 0, 1]
+    r = [0, 1]
 
     # Initial state
     z_0 = zeros(16)
-    z_0[1:4] = r # Start from position 1
+    z_0[8:9] = r # Start from position 1 in NC state
 
     # Execute a move to position a_t
     z_t_min = z_0

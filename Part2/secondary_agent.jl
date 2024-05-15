@@ -1,42 +1,42 @@
 function constructSecondaryPriors()
     eps = 0.1
-    B_0 = eps*ones(2, L) # Maps offer (index of αs) to (CV, NV)
+    A_prime_0 = eps*ones(2, L) # Maps offer (index of αs) to (CV, NV)
 end
 
-function initializeSecondaryAgent(B_0)
+function initializeSecondaryAgent(A_prime_0)
     iterations = 50 # Iterations of variational algorithm
 
-    B_s = deepcopy(B_0) # Initialize prior
-    function infer_prime(t::Int64, a::Union{Int64, Missing}, o::Union{Vector, Missing})
+    A_prime_s = deepcopy(A_prime_0) # Initialize prior
+    function infer_prime(t::Int64, a_prime::Union{Int64, Missing}, o_prime::Union{Vector, Missing})
         # Define possible policies
-        G = Vector{Union{Float64, Missing}}(missing, L)
+        G_prime = Vector{Union{Float64, Missing}}(missing, L)
         if t === 1
             pols = 1:L # Enumerate all possible offers
         elseif t === 2
-            pols = a # Register made offer
+            pols = a_prime # Register made offer
         end
         
         # Define (un)observed data for meta objects
-        x = deepcopy(o)
+        x_prime = deepcopy(o_prime)
     
         for i in pols
             α = αs[i] # Select offer value
 
             # Convert offer to one-hot control
-            u = zeros(L)
-            u[i] = 1.0
+            u_prime = zeros(L)
+            u_prime[i] = 1.0
 
             # Define model
-            model = t_maze_secondary(B_s, x, u)
+            model = t_maze_secondary(A_prime_s, x_prime, u_prime)
 
             # Utility to secondary agent depends on offer
-            C = softmax((1-α)*[c, -c])
+            C_prime = softmax((1-α)*[c, -c])
             
-            data = (c = C,)
+            data = (c_prime = C_prime,)
     
             constraints = structured(t<2)
 
-            initmarginals = (B = MatrixDirichlet(asym(B_s)),)
+            initmarginals = (A_prime = MatrixDirichlet(asym(A_prime_s)),)
     
             res = inference(model         = model,
                             data          = data,
@@ -45,17 +45,17 @@ function initializeSecondaryAgent(B_0)
                             iterations    = iterations,
                             free_energy   = true)
                         
-            G[i] = mean(res.free_energy[10:iterations])./log(2) # Average to smooth fluctuations and convert to bits
+            G_prime[i] = mean(res.free_energy[10:iterations])./log(2) # Average to smooth fluctuations and convert to bits
             if t === 2 # Return posterior statistics after learning
-                B_s = res.posteriors[:B][end].a
+                A_prime_s = res.posteriors[:A_prime][end].a
             end
         end
     
-        return (G, B_s)
+        return (G_prime, A_prime_s)
     end
 
-    function act_prime(G)
-        p = softmax(-10.0*G) # Sharpen for minimum selection (fixed precision)
+    function act_prime(G_prime)
+        p = softmax(-10.0*G_prime) # Sharpen for minimum selection (fixed precision)
         pol = rand(Categorical(p)) # Select a policy
         
         return pol # Select from possible actions

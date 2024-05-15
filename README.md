@@ -33,4 +33,4 @@ Exit Julia, navigate to the root directory and start a Jupyter server
 A browser window will open, and you can select the demo you wish to run.
 
 # License
-MIT License, Copyright (c) 2023 BIASlab http://biaslab.org
+MIT License, Copyright (c) 2024 BIASlab http://biaslab.org
